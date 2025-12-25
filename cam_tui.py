@@ -1,5 +1,5 @@
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Select, Static, Log, Input, TabbedContent, TabPane
 from textual.binding import Binding
 import subprocess
@@ -149,82 +149,111 @@ class CameraTUI(App):
     Screen {
         layout: vertical;
     }
-    #title {
-        text-align: center;
-        text-style: bold;
-        padding: 1;
-    }
-    .status-box {
-        height: auto;
-        border: solid cyan;
-        margin: 1;
-        padding: 1;
-    }
-    .device-box {
-        height: auto;
-        border: solid yellow;
-        margin: 1;
-        padding: 1;
-    }
-    .cameras-box {
-        height: auto;
-        border: solid magenta;
-        margin: 1;
-        padding: 1;
-    }
-    .box {
-        height: auto;
-        border: solid green;
-        margin: 1;
-        padding: 1;
-    }
-    .controls {
-        height: auto;
-        align: center middle;
-    }
-    .input-row {
+    
+    #status_bar {
         height: 3;
-        margin: 1;
+        padding: 0 1;
+        background: $surface;
+        border-bottom: solid $primary;
     }
+    
+    #status_bar Static {
+        width: 1fr;
+    }
+    
+    TabbedContent {
+        height: 1fr;
+    }
+    
+    TabPane {
+        padding: 0 1;
+    }
+    
     .form-row {
         height: 3;
+        margin: 0;
+    }
+    
+    .form-row Static {
+        width: 15;
+        padding: 1 1 0 0;
+    }
+    
+    .form-row Select {
+        width: 1fr;
+    }
+    
+    .form-row Input {
+        width: 1fr;
+    }
+    
+    .form-row Button {
+        width: auto;
+        min-width: 12;
+        margin: 0 0 0 1;
+    }
+    
+    #cameras_info {
+        height: auto;
+        max-height: 6;
+        border: solid $secondary;
+        padding: 0 1;
+        margin: 1 0;
+    }
+    
+    .btn-row {
+        height: 3;
+        margin: 1 0;
+        align: center middle;
+    }
+    
+    .btn-row Button {
         margin: 0 1;
     }
-    Button {
-        margin: 1;
+    
+    #custom_res_row {
+        height: 3;
     }
-    Input {
-        width: 100%;
+    
+    #log {
+        height: 8;
+        border: solid $accent;
+        margin: 0;
     }
-    Log {
-        height: 1fr;
-        border: solid blue;
-        margin: 1;
-    }
-    TabPane {
+    
+    /* Connect tab */
+    .section {
         height: auto;
+        border: solid $primary;
         padding: 1;
+        margin: 0 0 1 0;
     }
-    ContentSwitcher {
-        height: auto;
+    
+    .section-title {
+        text-style: bold;
+        margin-bottom: 1;
     }
-    #pair_section {
-        height: auto;
-        border: solid green;
-        padding: 1;
-        margin: 1;
+    
+    .connect-row {
+        height: 3;
     }
-    #connect_section {
-        height: auto;
-        border: solid cyan;
-        padding: 1;
-        margin: 1;
+    
+    .connect-row Static {
+        width: 12;
+        padding: 1 1 0 0;
     }
-    #qr_section {
-        height: auto;
-        border: solid magenta;
-        padding: 1;
-        margin: 1;
+    
+    .connect-row Input {
+        width: 1fr;
+    }
+    
+    .connect-btn-row {
+        height: 3;
+        margin-top: 1;
+    }
+    
+    .connect-btn-row Button {
+        margin-right: 1;
     }
     """
 
@@ -238,81 +267,87 @@ class CameraTUI(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Container(
-            Static("PopDroidCam - Android Webcam", id="title"),
-            Container(
-                Static("Device: Checking...", id="device_label"),
-                classes="device-box"
-            ),
-            Container(
-                Static("Stream: Checking...", id="status_label"),
-                classes="status-box"
-            ),
-        )
+        
+        # Compact status bar
+        with Horizontal(id="status_bar"):
+            yield Static("Device: Checking...", id="device_label")
+            yield Static("Stream: Checking...", id="status_label")
+        
         with TabbedContent():
             with TabPane("Camera", id="camera_tab"):
-                yield Static("[bold]Device:[/bold]")
-                yield Select([], id="device_select", prompt="Select device...")
-                yield Button("Refresh Devices", variant="primary", id="refresh_devices")
-                yield Static("")
-                yield Container(
-                    Static("Available Cameras: Click 'Detect Cameras' after selecting device", id="cameras_label"),
-                    classes="cameras-box"
-                )
-                yield Static("[bold]Camera Settings:[/bold]")
-                yield Static("Camera (back/front):")
-                yield Select.from_values(["back", "front"], value="back", id="camera_select")
-                yield Static("Camera ID (for specific lens - leave empty for default):")
-                yield Input(placeholder="e.g. 0, 1, 2 (see Detect Cameras)", id="camera_id")
-                yield Static("Resolution:")
-                yield Select.from_values(
-                    ["1920x1080", "3840x2160", "1280x720", "4080x3060", "3264x2448", "custom"],
-                    value="1920x1080",
-                    id="res_select"
-                )
-                yield Static("Custom Resolution:", id="custom_res_label")
-                yield Input(placeholder="e.g. 4080x3060", id="custom_res")
-                yield Static("FPS:")
-                yield Select.from_values(["10", "15", "20", "24", "30"], value="30", id="fps_select")
-                yield Horizontal(
-                    Button("Start Stream", variant="success", id="start"),
-                    Button("Stop Stream", variant="error", id="stop"),
-                    Button("Detect Cameras", variant="warning", id="detect"),
-                    classes="controls"
-                )
+                # Device row
+                with Horizontal(classes="form-row"):
+                    yield Static("Device:")
+                    yield Select([], id="device_select", prompt="Select device...")
+                    yield Button("Refresh", id="refresh_devices")
+                
+                # Camera info (collapsible area)
+                yield Static("Cameras: Click 'Detect' after selecting device", id="cameras_info")
+                
+                # Camera + ID row
+                with Horizontal(classes="form-row"):
+                    yield Static("Camera:")
+                    yield Select.from_values(["back", "front"], value="back", id="camera_select")
+                    yield Static("ID:", classes="short-label")
+                    yield Input(placeholder="0,1,2...", id="camera_id")
+                    yield Button("Detect", id="detect")
+                
+                # Resolution + FPS row
+                with Horizontal(classes="form-row"):
+                    yield Static("Resolution:")
+                    yield Select.from_values(
+                        ["1920x1080", "1280x720", "3840x2160", "custom"],
+                        value="1920x1080",
+                        id="res_select"
+                    )
+                    yield Static("FPS:")
+                    yield Select.from_values(["30", "24", "20", "15", "10"], value="30", id="fps_select")
+                
+                # Custom resolution row (hidden by default)
+                with Horizontal(classes="form-row", id="custom_res_row"):
+                    yield Static("Custom:")
+                    yield Input(placeholder="WIDTHxHEIGHT (e.g. 4080x3060)", id="custom_res")
+                
+                # Action buttons
+                with Horizontal(classes="btn-row"):
+                    yield Button("Start Stream", variant="success", id="start")
+                    yield Button("Stop Stream", variant="error", id="stop")
+                
             with TabPane("Connect", id="connect_tab"):
-                yield Static("[bold]Wireless Connection[/bold] - Connect to phone over WiFi")
-                yield Vertical(
-                    Static("[cyan]QR Code Pairing (Easiest)[/cyan]"),
-                    Static("Run in terminal: [bold]popdroidcam qr[/bold]"),
-                    Static("Then scan with phone: Wireless debugging → Pair with QR code"),
-                    id="qr_section"
-                )
-                yield Vertical(
-                    Static("[cyan]Manual Pairing[/cyan]"),
-                    Static("Phone: Settings → Developer Options → Wireless debugging → Pair device"),
-                    Static("IP Address:"),
-                    Input(placeholder="192.168.1.100", id="pair_ip"),
-                    Static("Pairing Port:"),
-                    Input(placeholder="37123", id="pair_port"),
-                    Static("Pairing Code:"),
-                    Input(placeholder="123456", id="pair_code"),
-                    Button("Pair", variant="warning", id="pair_btn"),
-                    id="pair_section"
-                )
-                yield Vertical(
-                    Static("[cyan]Connect (after pairing)[/cyan]"),
-                    Static("Use IP:Port from Wireless debugging main screen"),
-                    Static("IP Address:"),
-                    Input(placeholder="192.168.1.100", id="connect_ip"),
-                    Static("Connection Port:"),
-                    Input(placeholder="41255", id="connect_port"),
-                    Horizontal(
-                        Button("Connect", variant="success", id="connect_btn"),
-                        Button("Disconnect", variant="error", id="disconnect_btn"),
-                    ),
-                    id="connect_section"
-                )
+                with VerticalScroll():
+                    # QR Section
+                    with Vertical(classes="section"):
+                        yield Static("[cyan]QR Code Pairing (Easiest)[/cyan]", classes="section-title")
+                        yield Static("Run: [bold]popdroidcam qr[/bold] then scan with phone")
+                    
+                    # Manual Pair Section
+                    with Vertical(classes="section"):
+                        yield Static("[cyan]Manual Pairing[/cyan]", classes="section-title")
+                        yield Static("Phone: Developer Options > Wireless debugging > Pair device")
+                        with Horizontal(classes="connect-row"):
+                            yield Static("IP:")
+                            yield Input(placeholder="192.168.1.100", id="pair_ip")
+                            yield Static("Port:")
+                            yield Input(placeholder="37123", id="pair_port")
+                        with Horizontal(classes="connect-row"):
+                            yield Static("Code:")
+                            yield Input(placeholder="123456", id="pair_code")
+                        with Horizontal(classes="connect-btn-row"):
+                            yield Button("Pair", variant="warning", id="pair_btn")
+                    
+                    # Connect Section
+                    with Vertical(classes="section"):
+                        yield Static("[cyan]Connect (after pairing)[/cyan]", classes="section-title")
+                        yield Static("Use IP:Port from Wireless debugging main screen")
+                        with Horizontal(classes="connect-row"):
+                            yield Static("IP:")
+                            yield Input(placeholder="192.168.1.100", id="connect_ip")
+                            yield Static("Port:")
+                            yield Input(placeholder="41255", id="connect_port")
+                        with Horizontal(classes="connect-btn-row"):
+                            yield Button("Connect", variant="success", id="connect_btn")
+                            yield Button("Disconnect", variant="error", id="disconnect_btn")
+        
         yield Log(id="log")
         yield Footer()
 
@@ -321,24 +356,22 @@ class CameraTUI(App):
         self.refresh_devices()
         self.log_message("Ready. Connect phone via USB or WiFi.")
         self.log_message("For WiFi: Go to 'Connect' tab or run 'popdroidcam qr'")
-        self.query_one("#custom_res_label", Static).display = False
-        self.query_one("#custom_res", Input).display = False
+        # Hide custom resolution row by default
+        self.query_one("#custom_res_row").display = False
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "res_select":
-            custom_label = self.query_one("#custom_res_label", Static)
-            custom_input = self.query_one("#custom_res", Input)
+            custom_row = self.query_one("#custom_res_row")
             if event.value == "custom":
-                custom_label.display = True
-                custom_input.display = True
-                self.log_message("Enter custom resolution in WIDTHxHEIGHT format")
+                custom_row.display = True
+                self.log_message("Enter custom resolution (WIDTHxHEIGHT)")
             else:
-                custom_label.display = False
-                custom_input.display = False
+                custom_row.display = False
 
     def action_refresh(self) -> None:
         self.update_status()
-        self.log_message("Status refreshed.")
+        self.refresh_devices()
+        self.log_message("Refreshed.")
 
     def update_status(self):
         device_label = self.query_one("#device_label", Static)
@@ -351,33 +384,32 @@ class CameraTUI(App):
             connected = [d for d in devices if d['state'] == 'device']
             if connected:
                 dev = connected[0]
-                device_label.update(f"Device: [green]● Connected ({dev['type']})[/green] - {dev['serial']}")
+                device_label.update(f"Device: [green]●[/green] {dev['type']} - {dev['serial'][:20]}")
             else:
                 unauthorized = [d for d in devices if d['state'] == 'unauthorized']
                 if unauthorized:
-                    device_label.update("Device: [yellow]● Unauthorized[/yellow] - Accept prompt on phone")
+                    device_label.update("Device: [yellow]●[/yellow] Unauthorized")
                 else:
-                    device_label.update("Device: [red]● Not connected[/red]")
+                    device_label.update("Device: [red]●[/red] Not connected")
         else:
-            device_label.update("Device: [red]● Not connected[/red]")
+            device_label.update("Device: [red]●[/red] Not connected")
 
         pid = is_running()
         if pid:
             config = get_current_config()
-            res = config.get("res", "unknown")
-            fps = config.get("fps", "unknown")
-            camera = config.get("camera", "unknown")
-            status_label.update(f"Stream: [green]● Running[/green] (PID: {pid}) | {camera} @ {res} {fps}fps")
+            res = config.get("res", "?")
+            fps = config.get("fps", "?")
+            status_label.update(f"Stream: [green]●[/green] Running ({res}@{fps}fps)")
             start_btn.disabled = True
             stop_btn.disabled = False
         else:
-            status_label.update("Stream: [red]● Stopped[/red]")
+            status_label.update("Stream: [red]●[/red] Stopped")
             start_btn.disabled = False
             stop_btn.disabled = True
 
     def detect_cameras(self):
-        cameras_label = self.query_one("#cameras_label", Static)
-        cameras_label.update("Detecting cameras...")
+        cameras_info = self.query_one("#cameras_info", Static)
+        cameras_info.update("Detecting cameras...")
         self.log_message("Querying phone cameras...")
         
         device_select = self.query_one("#device_select", Select)
@@ -387,40 +419,32 @@ class CameraTUI(App):
         self.available_cameras = get_available_cameras(serial)
         
         if self.available_cameras:
-            lines = ["[bold]Available Cameras:[/bold]"]
+            lines = []
             for cam in self.available_cameras:
-                lines.append(f"  • {cam['facing'].capitalize()} (id={cam['id']}): {cam['resolution']} @ {', '.join(cam['fps'])} fps")
-            cameras_label.update("\n".join(lines))
-            
-            res_select = self.query_one("#res_select", Select)
-            resolutions = list(set([cam['resolution'] for cam in self.available_cameras]))
-            resolutions.extend(["1920x1080", "1280x720", "custom"])
-            
+                lines.append(f"[bold]id={cam['id']}[/bold] {cam['facing']} {cam['resolution']} fps={','.join(cam['fps'])}")
+            cameras_info.update(" | ".join(lines))
             self.log_message(f"Found {len(self.available_cameras)} camera(s)")
-            for cam in self.available_cameras:
-                self.log_message(f"  {cam['facing']}: {cam['resolution']} fps={cam['fps']}")
         else:
-            cameras_label.update("No cameras detected. Is phone connected?")
-            self.log_message("Could not detect cameras. Check USB connection.")
+            cameras_info.update("[red]No cameras detected. Is phone connected?[/red]")
+            self.log_message("Could not detect cameras.")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "start":
+        btn_id = event.button.id
+        if btn_id == "start":
             self.start_stream()
-        elif event.button.id == "stop":
+        elif btn_id == "stop":
             self.stop_stream()
-        elif event.button.id == "refresh":
-            self.update_status()
-            self.log_message("Status refreshed.")
-        elif event.button.id == "detect":
+        elif btn_id == "detect":
             self.detect_cameras()
-        elif event.button.id == "pair_btn":
+        elif btn_id == "pair_btn":
             self.do_pair()
-        elif event.button.id == "connect_btn":
+        elif btn_id == "connect_btn":
             self.do_connect()
-        elif event.button.id == "disconnect_btn":
+        elif btn_id == "disconnect_btn":
             self.do_disconnect()
-        elif event.button.id == "refresh_devices":
+        elif btn_id == "refresh_devices":
             self.refresh_devices()
+            self.update_status()
 
     def do_pair(self):
         ip = self.query_one("#pair_ip", Input).value.strip()
@@ -428,18 +452,17 @@ class CameraTUI(App):
         code = self.query_one("#pair_code", Input).value.strip()
         
         if not ip or not port or not code:
-            self.log_message("Error: Fill in IP, Port, and Code for pairing")
+            self.log_message("[red]Error: Fill IP, Port, and Code[/red]")
             return
         
         self.log_message(f"Pairing with {ip}:{port}...")
         success, output = adb_pair(ip, port, code)
         
         if success:
-            self.log_message(f"[green]✓ Paired successfully![/green]")
-            self.log_message("Now enter the connection port and click Connect")
+            self.log_message("[green]Paired! Now enter connection port and click Connect[/green]")
             self.query_one("#connect_ip", Input).value = ip
         else:
-            self.log_message(f"[red]✗ Pairing failed: {output}[/red]")
+            self.log_message(f"[red]Pairing failed: {output}[/red]")
         
         self.update_status()
 
@@ -448,24 +471,25 @@ class CameraTUI(App):
         port = self.query_one("#connect_port", Input).value.strip()
         
         if not ip or not port:
-            self.log_message("Error: Fill in IP and Port to connect")
+            self.log_message("[red]Error: Fill IP and Port[/red]")
             return
         
         self.log_message(f"Connecting to {ip}:{port}...")
         success, output = adb_connect(ip, port)
         
         if success:
-            self.log_message(f"[green]✓ Connected to {ip}:{port}[/green]")
-            self.log_message("You can now use the Camera tab to start streaming")
+            self.log_message(f"[green]Connected! Switch to Camera tab to start streaming[/green]")
+            self.refresh_devices()
         else:
-            self.log_message(f"[red]✗ Connection failed: {output}[/red]")
+            self.log_message(f"[red]Connection failed: {output}[/red]")
         
         self.update_status()
 
     def do_disconnect(self):
         self.log_message("Disconnecting...")
         success, output = adb_disconnect()
-        self.log_message("[green]✓ Disconnected all wireless devices[/green]")
+        self.log_message("[green]Disconnected all wireless devices[/green]")
+        self.refresh_devices()
         self.update_status()
 
     def refresh_devices(self):
@@ -481,7 +505,6 @@ class CameraTUI(App):
             self.log_message(f"Found {len(connected)} device(s)")
         else:
             device_select.set_options([])
-            self.log_message("No devices connected. Connect via USB or WiFi.")
 
     def start_stream(self):
         if is_running():
@@ -499,13 +522,12 @@ class CameraTUI(App):
         if res_select == "custom":
             res = self.query_one("#custom_res", Input).value.strip()
             if not re.match(r'^\d+x\d+$', res):
-                self.log_message("Invalid resolution format. Use WIDTHxHEIGHT (e.g. 4080x3060)")
+                self.log_message("[red]Invalid resolution. Use WIDTHxHEIGHT (e.g. 1920x1080)[/red]")
                 return
         else:
             res = res_select
 
         v4l2_device = find_v4l2loopback_device()
-        self.log_message(f"Using v4l2 device: {v4l2_device}")
 
         cmd = [
             "scrcpy",
@@ -519,15 +541,13 @@ class CameraTUI(App):
 
         if camera_id:
             cmd.append(f"--camera-id={camera_id}")
-            self.log_message(f"Using camera ID: {camera_id}")
         else:
             cmd.append(f"--camera-facing={camera}")
 
         if selected_device and selected_device != Select.BLANK:
             cmd.append(f"--serial={selected_device}")
-            self.log_message(f"Using Android device: {selected_device}")
 
-        self.log_message(f"Starting: {' '.join(cmd)}")
+        self.log_message(f"Starting: {res}@{fps}fps...")
 
         try:
             os.makedirs(STATE_DIR, exist_ok=True)
@@ -549,17 +569,16 @@ class CameraTUI(App):
                 f.write(f"camera={camera}\n")
                 f.write(f"device={v4l2_device}\n")
 
-            self.log_message(f"Stream started! PID: {self.scrcpy_process.pid}")
-            self.log_message("Select 'Android Cam' in your video apps.")
+            self.log_message(f"[green]Stream started! Select 'Android Cam' in your apps.[/green]")
             self.update_status()
 
         except Exception as e:
-            self.log_message(f"Error: {e}")
+            self.log_message(f"[red]Error: {e}[/red]")
 
     def stop_stream(self):
         pid = is_running()
         if pid:
-            self.log_message(f"Stopping stream (PID: {pid})...")
+            self.log_message(f"Stopping stream...")
             try:
                 os.killpg(os.getpgid(pid), signal.SIGTERM)
             except ProcessLookupError:
@@ -570,7 +589,7 @@ class CameraTUI(App):
             if os.path.exists(PID_FILE):
                 os.remove(PID_FILE)
 
-            self.log_message("Stream stopped.")
+            self.log_message("[green]Stream stopped.[/green]")
         else:
             self.log_message("No stream running.")
 

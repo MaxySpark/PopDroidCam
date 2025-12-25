@@ -1,24 +1,41 @@
 # PopDroidCam
 
-Use your Android phone as a high-quality webcam on Linux over USB or WiFi.
+**Turn your Android phone into a high-quality webcam for Linux.**
+
+No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4K, and custom resolutions.
 
 ## Features
 
-- **High resolution streaming** - 1080p, 4K, or native camera resolution (e.g., 4080x3060)
-- **Flexible frame rates** - 10, 15, 20, 24, 30 fps (device dependent)
-- **Camera lens selection** - Choose specific camera by ID (wide, ultrawide, telephoto)
-- **Works everywhere** - Zoom, Google Meet, Teams, OBS, Chrome, Firefox
+- **High quality video** - 1080p, 4K, up to 30fps (device dependent)
+- **Zero phone setup** - No app needed, just enable USB/Wireless debugging
 - **USB or WiFi** - Connect via cable or wireless debugging
-- **QR code pairing** - Easiest way to connect wirelessly
-- **Multi-device support** - Use multiple phones simultaneously
-- **CLI + TUI** - Command-line interface and interactive terminal UI
-- **Background streaming** - Runs headless, no window or dock icon
+- **QR code pairing** - Easy wireless setup
+- **Multi-camera support** - Choose between back, front, wide, ultrawide lenses
+- **Works everywhere** - Zoom, Meet, Teams, OBS, Chrome, Firefox
+- **CLI + TUI** - Command-line and interactive terminal interface
+- **Background mode** - No window, no dock icon
+
+## Quick Start
+
+```bash
+# 1. Clone and install
+git clone https://github.com/YourUsername/PopDroidCamera.git
+cd PopDroidCamera
+./setup.sh
+
+# 2. Connect phone via USB with debugging enabled
+
+# 3. Start streaming
+popdroidcam start
+
+# 4. Select "Android Cam" in your video app
+```
 
 ## Requirements
 
-- Linux (tested on Pop!_OS 22.04)
-- Android phone with USB debugging or Wireless debugging enabled
-- USB cable or WiFi connection
+- Linux (tested on Pop!_OS 22.04, Ubuntu 22.04+)
+- Android phone with Developer Options enabled
+- USB cable (easiest) or WiFi on same network
 
 ## Tested Devices
 
@@ -26,20 +43,24 @@ Use your Android phone as a high-quality webcam on Linux over USB or WiFi.
 |--------|-------------|--------------|
 | Vivo T4x | 4080x3060 @ 30fps | 3264x2448 @ 30fps |
 
-> Run `popdroidcam list` to see your phone's camera capabilities.
+> Run `popdroidcam list` to see your phone's capabilities.
 
 ## Installation
 
 ```bash
-git clone <repo>
+git clone https://github.com/YourUsername/PopDroidCamera.git
 cd PopDroidCamera
 ./setup.sh
 ```
 
-After setup, restart your terminal or run:
-```bash
-source ~/.bashrc
-```
+The setup script:
+- Creates Python virtual environment
+- Installs dependencies (textual, qrcode, zeroconf)
+- Builds scrcpy 2.x from source (required for camera support)
+- Sets up v4l2loopback kernel module
+- Adds `popdroidcam` to your PATH
+
+After setup, restart your terminal or run `source ~/.bashrc`.
 
 ## Usage
 
@@ -148,23 +169,20 @@ popdroidcam disconnect
 ### Examples
 
 ```bash
-# Quick start with defaults (1080p, 30fps, back camera)
+# Quick start (1080p, 30fps, back camera)
 popdroidcam start
 
 # 4K back camera
-popdroidcam start --res 4k --fps 30
+popdroidcam start --res 4k
 
-# Front camera for selfie view
+# Front camera
 popdroidcam start --camera front
 
-# Use native camera resolution (check with 'popdroidcam list')
-popdroidcam start --res 4080x3060 --fps 30
-popdroidcam start --camera front --res 3264x2448
+# Specific lens by ID (see 'popdroidcam list')
+popdroidcam start --camera-id 2
 
-# Check if running
+# Check status / stop
 popdroidcam status
-
-# Stop when done
 popdroidcam stop
 ```
 
@@ -288,6 +306,17 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 
 Run `./setup.sh` to build scrcpy 2.x+ from source (required for camera support).
 
+### Custom resolution not working
+
+If a custom resolution fails (e.g., 4080x3060), it's likely a **hardware encoder limitation** on your phone. The camera sensor can capture at that resolution, but the phone's MediaCodec can't encode it for streaming.
+
+**Solution**: Use standard resolutions that encoders support well:
+- `1920x1080` (recommended - works on all devices)
+- `1280x720` (lower bandwidth)
+- `3840x2160` (4K - if your phone supports it)
+
+Check `~/.local/state/popdroidcam/scrcpy.log` for error details if streaming fails.
+
 ## How It Works
 
 1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
@@ -311,3 +340,7 @@ This removes:
 ## License
 
 MIT
+
+---
+
+**Made for Pop!_OS / Ubuntu Linux** | Uses [scrcpy](https://github.com/Genymobile/scrcpy) under the hood
