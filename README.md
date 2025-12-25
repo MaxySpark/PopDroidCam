@@ -4,17 +4,26 @@ Use your Android phone as a high-quality webcam on Linux over USB.
 
 ## Features
 
-- 1080p / 4K video streaming at 30/60 fps
-- Works with Zoom, Google Meet, Teams, OBS, and browsers
-- USB connection (no WiFi latency)
-- Simple CLI and TUI interface
-- Background streaming with start/stop commands
+- **High resolution streaming** - 1080p, 4K, or native camera resolution (e.g., 4080x3060)
+- **Flexible frame rates** - 10, 15, 20, 24, 30 fps (device dependent)
+- **Works everywhere** - Zoom, Google Meet, Teams, OBS, Chrome, Firefox
+- **USB connection** - No WiFi latency, reliable and fast
+- **CLI + TUI** - Command-line interface and interactive terminal UI
+- **Background streaming** - Start once, use in any app
 
 ## Requirements
 
-- Linux (tested on Pop!_OS)
+- Linux (tested on Pop!_OS 22.04)
 - Android phone with USB debugging enabled
 - USB cable
+
+## Tested Devices
+
+| Device | Back Camera | Front Camera |
+|--------|-------------|--------------|
+| Vivo T4x | 4080x3060 @ 30fps | 3264x2448 @ 30fps |
+
+> Run `popdroidcam list` to see your phone's camera capabilities.
 
 ## Installation
 
@@ -41,7 +50,7 @@ popdroidcam
 popdroidcam start
 
 # Start with custom settings
-popdroidcam start --res 4k --fps 60
+popdroidcam start --res 4k --fps 30
 popdroidcam start --res 1080p --fps 30 --camera front
 
 # Stop camera
@@ -64,21 +73,25 @@ popdroidcam help
 
 | Option | Values | Default |
 |--------|--------|---------|
-| `--res` | `720p`, `1080p`, `4k` | `1080p` |
-| `--fps` | `30`, `60` | `30` |
+| `--res` | `720p`, `1080p`, `4k`, or custom (e.g., `4080x3060`) | `1080p` |
+| `--fps` | `10`, `15`, `20`, `24`, `30` (device dependent) | `30` |
 | `--camera` | `front`, `back` | `back` |
 
 ### Examples
 
 ```bash
-# Quick start with defaults
+# Quick start with defaults (1080p, 30fps, back camera)
 popdroidcam start
 
-# 4K 60fps back camera
-popdroidcam start --res 4k --fps 60
+# 4K back camera
+popdroidcam start --res 4k --fps 30
 
 # Front camera for selfie view
 popdroidcam start --camera front
+
+# Use native camera resolution (check with 'popdroidcam list')
+popdroidcam start --res 4080x3060 --fps 30
+popdroidcam start --camera front --res 3264x2448
 
 # Check if running
 popdroidcam status
@@ -109,9 +122,20 @@ Run `popdroidcam` without arguments to launch the interactive interface:
 | File | Description |
 |------|-------------|
 | `popdroidcam` | Main CLI command |
-| `setup.sh` | Install dependencies and configure |
-| `cam_tui.py` | Terminal UI |
+| `cam_tui.py` | Terminal UI (Textual-based) |
+| `setup.sh` | Install dependencies, build scrcpy 2.x from source |
+| `uninstall.sh` | Remove installation and cleanup |
 | `test_stream.sh` | Verify streaming works |
+
+## State Files
+
+PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
+
+| File | Purpose |
+|------|---------|
+| `pid` | Process ID of running stream |
+| `config` | Current stream settings |
+| `scrcpy.log` | scrcpy output for debugging |
 
 ## Troubleshooting
 
@@ -147,6 +171,24 @@ Run `./setup.sh` to build scrcpy 2.x+ from source (required for camera support).
 
 ## How It Works
 
-1. **scrcpy** captures video from Android camera over USB (no app needed on phone)
-2. **v4l2loopback** creates a virtual webcam device
-3. **popdroidcam** manages the stream and provides easy controls
+1. **scrcpy 2.x** captures video from Android camera over USB (no app needed on phone)
+2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`)
+3. **popdroidcam** manages the stream and provides easy CLI/TUI controls
+
+> **Note**: Ubuntu/Pop!_OS ships scrcpy 1.x which lacks camera support. The setup script builds scrcpy 2.x from source.
+
+## Uninstall
+
+```bash
+./uninstall.sh
+```
+
+This removes:
+- Symlink from `~/.local/bin/popdroidcam`
+- State files from `~/.local/state/popdroidcam/`
+- Python virtual environment
+- Build artifacts (keeps source code)
+
+## License
+
+MIT
