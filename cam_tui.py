@@ -53,11 +53,14 @@ def get_current_config():
     return config
 
 
-def get_available_cameras():
+def get_available_cameras(serial=None):
     cameras = []
     try:
+        cmd = ["scrcpy", "--video-source=camera", "--list-cameras"]
+        if serial:
+            cmd.append(f"--serial={serial}")
         result = subprocess.run(
-            ["scrcpy", "--video-source=camera", "--list-cameras"],
+            cmd,
             capture_output=True, text=True, timeout=10
         )
         output = result.stdout + result.stderr
@@ -269,7 +272,8 @@ class CameraTUI(App):
                 yield Horizontal(
                     Static("Custom resolution:", classes="label"),
                     Input(placeholder="e.g. 4080x3060", id="custom_res"),
-                    classes="input-row"
+                    classes="input-row",
+                    id="custom_res_row"
                 )
                 yield Horizontal(
                     Button("Start Stream", variant="success", id="start"),
@@ -320,16 +324,16 @@ class CameraTUI(App):
         self.refresh_devices()
         self.log_message("Ready. Connect phone via USB or WiFi.")
         self.log_message("For WiFi: Go to 'Connect' tab to pair and connect.")
-        self.query_one("#custom_res", Input).display = False
+        self.query_one("#custom_res_row", Horizontal).display = False
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "res_select":
-            custom_input = self.query_one("#custom_res", Input)
+            custom_row = self.query_one("#custom_res_row", Horizontal)
             if event.value == "custom":
-                custom_input.display = True
+                custom_row.display = True
                 self.log_message("Enter custom resolution in WIDTHxHEIGHT format")
             else:
-                custom_input.display = False
+                custom_row.display = False
 
     def action_refresh(self) -> None:
         self.update_status()
@@ -375,7 +379,11 @@ class CameraTUI(App):
         cameras_label.update("Detecting cameras...")
         self.log_message("Querying phone cameras...")
         
-        self.available_cameras = get_available_cameras()
+        device_select = self.query_one("#device_select", Select)
+        selected_device = device_select.value
+        serial = selected_device if selected_device and selected_device != Select.BLANK else None
+        
+        self.available_cameras = get_available_cameras(serial)
         
         if self.available_cameras:
             lines = ["[bold]Available Cameras:[/bold]"]
@@ -472,7 +480,7 @@ class CameraTUI(App):
         password = randint(100000, 999999)
         qr_data = f"WIFI:T:ADB;S:popdroidcam;P:{password};;"
         
-        qr = qrcode.QRCode(border=1)
+        qr = qrcode.QRCode(border=1, box_size=1)
         qr.add_data(qr_data)
         qr.make(fit=True)
         
@@ -481,20 +489,17 @@ class CameraTUI(App):
         self.log_message("Phone → Wireless debugging → Pair device with QR code")
         self.log_message("")
         
-        lines = []
         matrix = qr.get_matrix()
         for row in matrix:
             line = ""
             for cell in row:
-                line += "██" if cell else "  "
-            lines.append(line)
-        
-        for line in lines:
+                line += "##" if cell else "  "
             self.log_message(line)
         
         self.log_message("")
         self.log_message(f"[yellow]Pairing code: {password}[/yellow]")
-        self.log_message("After scanning, use 'Connect' below with the port from phone")
+        self.log_message("[yellow]NOTE: QR scanning in TUI may not work - use 'popdroidcam qr' in terminal instead[/yellow]")
+        self.log_message("After pairing, use 'Connect' section below with the port from phone")
 
     def refresh_devices(self):
         device_select = self.query_one("#device_select", Select)
