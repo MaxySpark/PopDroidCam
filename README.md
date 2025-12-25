@@ -8,6 +8,8 @@ Use your Android phone as a high-quality webcam on Linux over USB or WiFi.
 - **Flexible frame rates** - 10, 15, 20, 24, 30 fps (device dependent)
 - **Works everywhere** - Zoom, Google Meet, Teams, OBS, Chrome, Firefox
 - **USB or WiFi** - Connect via cable or wireless debugging
+- **QR code pairing** - Easiest way to connect wirelessly
+- **Multi-device support** - Use multiple phones simultaneously
 - **CLI + TUI** - Command-line interface and interactive terminal UI
 - **Background streaming** - Runs headless, no window or dock icon
 
@@ -73,6 +75,23 @@ popdroidcam help
 
 Connect to your phone over WiFi instead of USB cable.
 
+#### Option 1: QR Code Pairing (Easiest)
+
+```bash
+popdroidcam qr
+```
+
+Then on your phone:
+1. Go to **Settings → Developer Options → Wireless debugging**
+2. Tap **"Pair device with QR code"**
+3. Scan the QR code shown in terminal
+4. Once paired, connect with the port shown on phone's Wireless debugging screen:
+   ```bash
+   popdroidcam connect <ip> <port>
+   ```
+
+#### Option 2: Manual Pairing
+
 **Step 1: Enable Wireless debugging on phone**
 ```
 Settings → Developer Options → Wireless debugging → Enable
@@ -112,6 +131,7 @@ popdroidcam disconnect
 | `--res` | `720p`, `1080p`, `4k`, or custom (e.g., `4080x3060`) | `1080p` |
 | `--fps` | `10`, `15`, `20`, `24`, `30` (device dependent) | `30` |
 | `--camera` | `front`, `back` | `back` |
+| `--device` | Device serial (e.g., `10BF54084E002ZB` or `192.168.1.100:5555`) | Auto-detect |
 
 **Resolution presets:**
 | Preset | Resolves to |
@@ -146,6 +166,23 @@ popdroidcam status
 popdroidcam stop
 ```
 
+### Multiple Devices
+
+When multiple phones are connected, use `--device` to select which one:
+
+```bash
+# List connected devices
+popdroidcam devices
+
+# Start with specific device (USB)
+popdroidcam start --device 10BF54084E002ZB
+
+# Start with specific device (WiFi)
+popdroidcam start --device 192.168.1.100:5555
+```
+
+In the TUI, use the device dropdown at the top of the Camera tab to select which phone to use.
+
 ## Using in Apps
 
 After starting the stream, select **"Android Cam"** as your camera in:
@@ -159,9 +196,11 @@ After starting the stream, select **"Android Cam"** as your camera in:
 
 Run `popdroidcam` without arguments to launch the interactive interface:
 
-- Select camera, resolution, and FPS
-- Start/Stop stream with buttons
-- See real-time status (shows if stream started via CLI too)
+- **Camera tab**: Select device, camera, resolution, FPS, and start/stop stream
+- **Connect tab**: Pair and connect to phones over WiFi
+- Device dropdown auto-populates with connected phones (USB and WiFi)
+- Real-time status display (shows if stream started via CLI too)
+- Press `r` to refresh status, `q` to quit
 
 ## Files
 
@@ -169,6 +208,7 @@ Run `popdroidcam` without arguments to launch the interactive interface:
 |------|-------------|
 | `popdroidcam` | Main CLI command |
 | `cam_tui.py` | Terminal UI (Textual-based) |
+| `qr_pair.py` | QR code pairing with mDNS discovery |
 | `setup.sh` | Install dependencies, build scrcpy 2.x from source |
 | `uninstall.sh` | Remove installation and cleanup |
 | `test_stream.sh` | Verify streaming works |

@@ -217,6 +217,12 @@ class CameraTUI(App):
         padding: 1;
         margin: 1;
     }
+    #qr_section {
+        height: auto;
+        border: solid magenta;
+        padding: 1;
+        margin: 1;
+    }
     """
 
     BINDINGS = [
@@ -242,6 +248,10 @@ class CameraTUI(App):
         )
         with TabbedContent():
             with TabPane("Camera", id="camera_tab"):
+                yield Static("[bold]Select Device:[/bold]")
+                yield Select([], id="device_select", prompt="Select device...")
+                yield Button("Refresh Devices", variant="primary", id="refresh_devices")
+                yield Static("")
                 yield Container(
                     Static("Available Cameras: Detecting...", id="cameras_label"),
                     classes="cameras-box"
@@ -270,7 +280,13 @@ class CameraTUI(App):
             with TabPane("Connect", id="connect_tab"):
                 yield Static("[bold]Wireless Connection[/bold] - Connect to phone over WiFi")
                 yield Vertical(
-                    Static("[cyan]Step 1: Pair (first-time only)[/cyan]"),
+                    Static("[cyan]Option 1: QR Code Pairing (Easiest)[/cyan]"),
+                    Static("Phone: Wireless debugging → Pair device with QR code"),
+                    Button("Show QR Code", variant="primary", id="show_qr_btn"),
+                    id="qr_section"
+                )
+                yield Vertical(
+                    Static("[cyan]Option 2: Manual Pairing[/cyan]"),
                     Static("Phone: Settings → Developer Options → Wireless debugging → Pair device"),
                     Static(""),
                     Static("IP Address:"),
@@ -301,6 +317,7 @@ class CameraTUI(App):
 
     def on_mount(self) -> None:
         self.update_status()
+        self.refresh_devices()
         self.log_message("Ready. Connect phone via USB or WiFi.")
         self.log_message("For WiFi: Go to 'Connect' tab to pair and connect.")
         self.query_one("#custom_res", Input).display = False
@@ -393,6 +410,10 @@ class CameraTUI(App):
             self.do_connect()
         elif event.button.id == "disconnect_btn":
             self.do_disconnect()
+        elif event.button.id == "refresh_devices":
+            self.refresh_devices()
+        elif event.button.id == "show_qr_btn":
+            self.show_qr_code()
 
     def do_pair(self):
         ip = self.query_one("#pair_ip", Input).value.strip()
@@ -440,12 +461,64 @@ class CameraTUI(App):
         self.log_message("[green]✓ Disconnected all wireless devices[/green]")
         self.update_status()
 
+    def show_qr_code(self):
+        from random import randint
+        try:
+            import qrcode
+        except ImportError:
+            self.log_message("[red]qrcode not installed. Run: pip install qrcode[pil][/red]")
+            return
+        
+        password = randint(100000, 999999)
+        qr_data = f"WIFI:T:ADB;S:popdroidcam;P:{password};;"
+        
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        
+        self.log_message("")
+        self.log_message("[bold cyan]=== Scan this QR code with your phone ===[/bold cyan]")
+        self.log_message("Phone → Wireless debugging → Pair device with QR code")
+        self.log_message("")
+        
+        lines = []
+        matrix = qr.get_matrix()
+        for row in matrix:
+            line = ""
+            for cell in row:
+                line += "██" if cell else "  "
+            lines.append(line)
+        
+        for line in lines:
+            self.log_message(line)
+        
+        self.log_message("")
+        self.log_message(f"[yellow]Pairing code: {password}[/yellow]")
+        self.log_message("After scanning, use 'Connect' below with the port from phone")
+
+    def refresh_devices(self):
+        device_select = self.query_one("#device_select", Select)
+        devices = get_device_status()
+        connected = [d for d in devices if d['state'] == 'device']
+        
+        if connected:
+            options = [(f"{d['serial']} ({d['type']})", d['serial']) for d in connected]
+            device_select.set_options(options)
+            if options:
+                device_select.value = options[0][1]
+            self.log_message(f"Found {len(connected)} device(s)")
+        else:
+            device_select.set_options([])
+            self.log_message("No devices connected. Connect via USB or WiFi.")
+
     def start_stream(self):
         if is_running():
             self.log_message("Stream already running!")
             self.update_status()
             return
 
+        device_select = self.query_one("#device_select", Select)
+        selected_device = device_select.value
         camera = self.query_one("#camera_select", Select).value
         res_select = self.query_one("#res_select", Select).value
         fps = self.query_one("#fps_select", Select).value
@@ -459,7 +532,7 @@ class CameraTUI(App):
             res = res_select
 
         v4l2_device = find_v4l2loopback_device()
-        self.log_message(f"Using device: {v4l2_device}")
+        self.log_message(f"Using v4l2 device: {v4l2_device}")
 
         cmd = [
             "scrcpy",
@@ -471,6 +544,10 @@ class CameraTUI(App):
             "--no-window",
             "--no-audio"
         ]
+
+        if selected_device and selected_device != Select.BLANK:
+            cmd.append(f"--serial={selected_device}")
+            self.log_message(f"Using Android device: {selected_device}")
 
         self.log_message(f"Starting: {' '.join(cmd)}")
 

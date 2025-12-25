@@ -22,7 +22,7 @@ echo ">>> Creating Python virtual environment..."
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install textual
+pip install textual qrcode[pil] zeroconf colorama
 
 echo ">>> Setting up build directory..."
 mkdir -p build_scrcpy

@@ -62,6 +62,7 @@ cmd_start() {
     local res="1920x1080"
     local fps="30"
     local camera="back"
+    local device=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -80,6 +81,10 @@ cmd_start() {
                 ;;
             --camera)
                 camera="$2"
+                shift 2
+                ;;
+            --device|-s)
+                device="$2"
                 shift 2
                 ;;
             *)
@@ -102,16 +107,16 @@ cmd_start() {
     echo "  FPS: $fps"
     echo "  Camera: $camera"
     echo "  Device: $v4l2_device"
+    if [ -n "$device" ]; then
+        echo "  Phone: $device"
+    fi
 
-    nohup scrcpy \
-        --video-source=camera \
-        --camera-facing="$camera" \
-        --camera-size="$res" \
-        --camera-fps="$fps" \
-        --v4l2-sink="$v4l2_device" \
-        --no-window \
-        --no-audio \
-        > "$STATE_DIR/scrcpy.log" 2>&1 &
+    local scrcpy_cmd="scrcpy --video-source=camera --camera-facing=$camera --camera-size=$res --camera-fps=$fps --v4l2-sink=$v4l2_device --no-window --no-audio"
+    if [ -n "$device" ]; then
+        scrcpy_cmd="$scrcpy_cmd --serial=$device"
+    fi
+
+    nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
 
     local pid=$!
     sleep 2
@@ -333,6 +338,14 @@ cmd_disconnect() {
     echo -e "${GREEN}✓ Disconnected${NC}"
 }
 
+cmd_qr() {
+    cd "$SCRIPT_DIR"
+    if [ -d "venv" ]; then
+        source venv/bin/activate
+    fi
+    python3 qr_pair.py
+}
+
 cmd_help() {
     echo "PopDroidCam - Use Android phone as webcam"
     echo ""
@@ -345,8 +358,9 @@ cmd_help() {
     echo "  status      Show current status"
     echo "  list        List available cameras on phone with resolutions"
     echo "  devices     List connected devices"
-    echo "  connect     Connect to phone over WiFi (wireless debugging)"
-    echo "  pair        Pair with phone for wireless debugging (first-time)"
+    echo "  qr          Show QR code for easy wireless pairing"
+    echo "  pair        Pair with phone manually (ip, port, code)"
+    echo "  connect     Connect to phone over WiFi"
     echo "  disconnect  Disconnect wireless devices"
     echo "  help        Show this help"
     echo ""
@@ -354,19 +368,23 @@ cmd_help() {
     echo "  --res       Resolution: 720p, 1080p, 4k, or custom (e.g. 4080x3060)"
     echo "  --fps       Frame rate: 10, 15, 20, 24, 30 (default)"
     echo "  --camera    Camera: back (default), front"
+    echo "  --device    Select device by serial (for multiple phones)"
     echo ""
-    echo "Wireless setup (one-time):"
-    echo "  1. Enable 'Wireless debugging' in Developer Options on phone"
-    echo "  2. popdroidcam pair <ip> <pairing-port> <code>"
-    echo "  3. popdroidcam connect <ip> <port>"
+    echo "Wireless setup:"
+    echo "  Option 1 - QR code (easiest):"
+    echo "    popdroidcam qr"
+    echo "    Then scan with phone: Wireless debugging → Pair with QR code"
+    echo ""
+    echo "  Option 2 - Manual pairing:"
+    echo "    popdroidcam pair <ip> <pairing-port> <code>"
+    echo "    popdroidcam connect <ip> <port>"
     echo ""
     echo "Examples:"
     echo "  popdroidcam start"
     echo "  popdroidcam start --res 4k --fps 30"
-    echo "  popdroidcam start --res 4080x3060 --fps 30"
-    echo "  popdroidcam start --camera front --res 3264x2448"
-    echo "  popdroidcam connect 192.168.1.100 5555"
-    echo "  popdroidcam list"
+    echo "  popdroidcam start --device 192.168.1.100:5555"
+    echo "  popdroidcam qr"
+    echo "  popdroidcam devices"
     echo "  popdroidcam stop"
 }
 
@@ -386,6 +404,9 @@ case "${1:-}" in
         ;;
     devices)
         cmd_devices
+        ;;
+    qr)
+        cmd_qr
         ;;
     connect)
         shift
