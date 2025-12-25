@@ -117,14 +117,13 @@ def adb_connect(ip, port):
 
 
 def adb_pair(ip, port, code):
-    """Pair with device for wireless debugging"""
     try:
         result = subprocess.run(
             ["adb", "pair", f"{ip}:{port}", code],
             capture_output=True, text=True, timeout=15
         )
         output = result.stdout + result.stderr
-        success = "successfully" in output.lower() or "paired" in output.lower()
+        success = "success" in output.lower() or "paired" in output.lower()
         return success, output.strip()
     except Exception as e:
         return False, str(e)
@@ -176,43 +175,47 @@ class CameraTUI(App):
         margin: 1;
         padding: 1;
     }
-    .connect-box {
-        height: auto;
-        border: solid cyan;
-        margin: 1;
-        padding: 1;
-    }
     .controls {
         height: auto;
         align: center middle;
     }
     .input-row {
-        height: auto;
-        align: center middle;
+        height: 3;
         margin: 1;
+    }
+    .form-row {
+        height: 3;
+        margin: 0 1;
     }
     Button {
         margin: 1;
     }
     Input {
-        width: 20;
-        margin: 1;
-    }
-    .ip-input {
-        width: 30;
-    }
-    .port-input {
-        width: 15;
-    }
-    .code-input {
-        width: 15;
+        width: 100%;
     }
     Log {
         height: 1fr;
         border: solid blue;
+        margin: 1;
     }
-    TabbedContent {
+    TabPane {
         height: auto;
+        padding: 1;
+    }
+    ContentSwitcher {
+        height: auto;
+    }
+    #pair_section {
+        height: auto;
+        border: solid green;
+        padding: 1;
+        margin: 1;
+    }
+    #connect_section {
+        height: auto;
+        border: solid cyan;
+        padding: 1;
+        margin: 1;
     }
     """
 
@@ -265,39 +268,33 @@ class CameraTUI(App):
                     classes="controls"
                 )
             with TabPane("Connect", id="connect_tab"):
-                yield Container(
-                    Static("[bold]Wireless Connection[/bold]\n\nConnect to phone over WiFi. First pair (once), then connect."),
-                    classes="connect-box"
-                )
-                yield Container(
+                yield Static("[bold]Wireless Connection[/bold] - Connect to phone over WiFi")
+                yield Vertical(
                     Static("[cyan]Step 1: Pair (first-time only)[/cyan]"),
-                    Horizontal(
-                        Static("IP:", classes="label"),
-                        Input(placeholder="192.168.1.100", id="pair_ip", classes="ip-input"),
-                        Static("Port:", classes="label"),
-                        Input(placeholder="37123", id="pair_port", classes="port-input"),
-                        Static("Code:", classes="label"),
-                        Input(placeholder="123456", id="pair_code", classes="code-input"),
-                        classes="input-row"
-                    ),
+                    Static("Phone: Settings → Developer Options → Wireless debugging → Pair device"),
+                    Static(""),
+                    Static("IP Address:"),
+                    Input(placeholder="192.168.1.100", id="pair_ip"),
+                    Static("Pairing Port:"),
+                    Input(placeholder="37123", id="pair_port"),
+                    Static("Pairing Code:"),
+                    Input(placeholder="123456", id="pair_code"),
                     Button("Pair", variant="warning", id="pair_btn"),
-                    classes="box"
+                    id="pair_section"
                 )
-                yield Container(
+                yield Vertical(
                     Static("[cyan]Step 2: Connect[/cyan]"),
-                    Horizontal(
-                        Static("IP:", classes="label"),
-                        Input(placeholder="192.168.1.100", id="connect_ip", classes="ip-input"),
-                        Static("Port:", classes="label"),
-                        Input(placeholder="41255", id="connect_port", classes="port-input"),
-                        classes="input-row"
-                    ),
+                    Static("Phone: Use IP:Port shown on Wireless debugging main screen"),
+                    Static(""),
+                    Static("IP Address:"),
+                    Input(placeholder="192.168.1.100", id="connect_ip"),
+                    Static("Connection Port:"),
+                    Input(placeholder="41255", id="connect_port"),
                     Horizontal(
                         Button("Connect", variant="success", id="connect_btn"),
                         Button("Disconnect", variant="error", id="disconnect_btn"),
-                        classes="controls"
                     ),
-                    classes="box"
+                    id="connect_section"
                 )
         yield Log(id="log")
         yield Footer()

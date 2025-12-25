@@ -288,7 +288,7 @@ cmd_pair() {
     local code="$3"
     
     if [ -z "$ip" ] || [ -z "$port" ]; then
-        echo -e "${RED}Usage: popdroidcam pair <ip> <port> [code]${NC}"
+        echo -e "${RED}Usage: popdroidcam pair <ip> <port> <code>${NC}"
         echo ""
         echo "To pair your phone:"
         echo "  1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)"
@@ -300,22 +300,29 @@ cmd_pair() {
         exit 1
     fi
     
-    echo -e "${CYAN}Pairing with $ip:$port...${NC}"
-    
-    if [ -n "$code" ]; then
-        echo "$code" | adb pair "$ip:$port"
-    else
-        echo "Enter pairing code shown on phone:"
-        adb pair "$ip:$port"
+    if [ -z "$code" ]; then
+        echo -e "${RED}Error: Pairing code is required${NC}"
+        echo "Usage: popdroidcam pair <ip> <port> <code>"
+        exit 1
     fi
     
-    if [ $? -eq 0 ]; then
+    echo -e "${CYAN}Pairing with $ip:$port using code $code...${NC}"
+    
+    local output=$(adb pair "$ip:$port" "$code" 2>&1)
+    echo "$output"
+    
+    if echo "$output" | grep -qi "success\|paired"; then
         echo -e "${GREEN}✓ Paired successfully${NC}"
         echo ""
-        echo "Now connect with: popdroidcam connect <ip> [port]"
+        echo "Now connect with: popdroidcam connect <ip> <port>"
         echo "(Use the port from 'Wireless debugging' screen, not the pairing port)"
     else
         echo -e "${RED}✗ Pairing failed${NC}"
+        echo ""
+        echo "Troubleshooting:"
+        echo "  1. Make sure the pairing code is still valid (they expire quickly)"
+        echo "  2. Tap 'Pair device with pairing code' again for a fresh code"
+        echo "  3. Ensure phone and PC are on same WiFi network"
         exit 1
     fi
 }
