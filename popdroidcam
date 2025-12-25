@@ -109,7 +109,7 @@ cmd_start() {
         --camera-size="$res" \
         --camera-fps="$fps" \
         --v4l2-sink="$v4l2_device" \
-        --no-playback \
+        --no-window \
         --no-audio \
         > "$STATE_DIR/scrcpy.log" 2>&1 &
 
