@@ -1,21 +1,21 @@
 # PopDroidCam
 
-Use your Android phone as a high-quality webcam on Linux over USB.
+Use your Android phone as a high-quality webcam on Linux over USB or WiFi.
 
 ## Features
 
 - **High resolution streaming** - 1080p, 4K, or native camera resolution (e.g., 4080x3060)
 - **Flexible frame rates** - 10, 15, 20, 24, 30 fps (device dependent)
 - **Works everywhere** - Zoom, Google Meet, Teams, OBS, Chrome, Firefox
-- **USB connection** - No WiFi latency, reliable and fast
+- **USB or WiFi** - Connect via cable or wireless debugging
 - **CLI + TUI** - Command-line interface and interactive terminal UI
-- **Background streaming** - Start once, use in any app
+- **Background streaming** - Runs headless, no window or dock icon
 
 ## Requirements
 
 - Linux (tested on Pop!_OS 22.04)
-- Android phone with USB debugging enabled
-- USB cable
+- Android phone with USB debugging or Wireless debugging enabled
+- USB cable or WiFi connection
 
 ## Tested Devices
 
@@ -68,6 +68,42 @@ popdroidcam devices
 # Show help
 popdroidcam help
 ```
+
+### Wireless Connection
+
+Connect to your phone over WiFi instead of USB cable.
+
+**Step 1: Enable Wireless debugging on phone**
+```
+Settings → Developer Options → Wireless debugging → Enable
+```
+
+**Step 2: Pair (first-time only)**
+```
+On phone: Tap "Pair device with pairing code"
+Note the IP address, Port, and 6-digit code shown
+```
+```bash
+popdroidcam pair <ip> <pairing-port> <code>
+# Example: popdroidcam pair 192.168.1.100 37123 123456
+```
+
+**Step 3: Connect**
+```
+On phone: Look at the Wireless debugging screen (not pairing)
+Note the IP address and Port shown at the top
+```
+```bash
+popdroidcam connect <ip> <port>
+# Example: popdroidcam connect 192.168.1.100 41255
+```
+
+**Disconnect:**
+```bash
+popdroidcam disconnect
+```
+
+> **Note**: Pairing port and connection port are different! After pairing once, you only need `connect` in the future.
 
 ### Options for `start`
 
@@ -168,12 +204,19 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 
 ### Phone not detected
 
-1. Enable USB debugging on phone (Settings → Developer Options)
+**USB:**
+1. Enable USB debugging on phone (Settings → Developer Options → USB debugging)
 2. Check connection:
    ```bash
    popdroidcam devices
    ```
 3. If "unauthorized", accept the prompt on your phone
+
+**WiFi:**
+1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)
+2. Pair first time: `popdroidcam pair <ip> <port> <code>`
+3. Connect: `popdroidcam connect <ip> <port>`
+4. Ensure phone and PC are on same network
 
 ### scrcpy version too old
 
@@ -181,7 +224,7 @@ Run `./setup.sh` to build scrcpy 2.x+ from source (required for camera support).
 
 ## How It Works
 
-1. **scrcpy 2.x** captures video from Android camera over USB (no app needed on phone)
+1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
 2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`)
 3. **popdroidcam** manages the stream and provides easy CLI/TUI controls
 

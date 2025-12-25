@@ -173,9 +173,18 @@ cmd_status() {
 
     echo ""
     echo "Device:"
-    if adb devices 2>/dev/null | grep -q "\sdevice$"; then
-        local device=$(adb devices | grep "\sdevice$" | head -1 | cut -f1)
-        echo -e "  Phone: ${GREEN}Connected${NC} ($device)"
+    local device_line=$(adb devices 2>/dev/null | grep -E "\s(device|unauthorized)$" | head -1)
+    if [ -n "$device_line" ]; then
+        local device=$(echo "$device_line" | cut -f1)
+        local state=$(echo "$device_line" | cut -f2)
+        if [[ "$device" == *":"* ]]; then
+            echo -e "  Phone: ${GREEN}Connected (WiFi)${NC} ($device)"
+        else
+            echo -e "  Phone: ${GREEN}Connected (USB)${NC} ($device)"
+        fi
+        if [ "$state" == "unauthorized" ]; then
+            echo -e "         ${YELLOW}⚠ Unauthorized - accept prompt on phone${NC}"
+        fi
     else
         echo -e "  Phone: ${RED}Not connected${NC}"
     fi
@@ -239,6 +248,84 @@ cmd_devices() {
     v4l2-ctl --list-devices 2>/dev/null || echo "  v4l2-ctl not available"
 }
 
+cmd_connect() {
+    local ip="$1"
+    local port="${2:-5555}"
+    
+    if [ -z "$ip" ]; then
+        echo -e "${RED}Usage: popdroidcam connect <ip> [port]${NC}"
+        echo ""
+        echo "To find your phone's IP and port:"
+        echo "  1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)"
+        echo "  2. Tap 'Pair device with pairing code' for first-time setup"
+        echo "  3. Note the IP address and Port shown"
+        echo ""
+        echo "Example:"
+        echo "  popdroidcam connect 192.168.1.100 5555"
+        exit 1
+    fi
+    
+    echo -e "${CYAN}Connecting to $ip:$port...${NC}"
+    
+    if adb connect "$ip:$port" 2>&1 | grep -q "connected"; then
+        echo -e "${GREEN}✓ Connected to $ip:$port${NC}"
+        echo ""
+        echo "Now you can use: popdroidcam start"
+    else
+        echo -e "${RED}✗ Failed to connect${NC}"
+        echo ""
+        echo "Troubleshooting:"
+        echo "  1. Ensure phone and PC are on same WiFi network"
+        echo "  2. Check Wireless debugging is enabled on phone"
+        echo "  3. Try pairing first: popdroidcam pair <ip> <port>"
+        exit 1
+    fi
+}
+
+cmd_pair() {
+    local ip="$1"
+    local port="$2"
+    local code="$3"
+    
+    if [ -z "$ip" ] || [ -z "$port" ]; then
+        echo -e "${RED}Usage: popdroidcam pair <ip> <port> [code]${NC}"
+        echo ""
+        echo "To pair your phone:"
+        echo "  1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)"
+        echo "  2. Tap 'Pair device with pairing code'"
+        echo "  3. Note the IP, Port, and Pairing code shown"
+        echo ""
+        echo "Example:"
+        echo "  popdroidcam pair 192.168.1.100 37123 123456"
+        exit 1
+    fi
+    
+    echo -e "${CYAN}Pairing with $ip:$port...${NC}"
+    
+    if [ -n "$code" ]; then
+        echo "$code" | adb pair "$ip:$port"
+    else
+        echo "Enter pairing code shown on phone:"
+        adb pair "$ip:$port"
+    fi
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Paired successfully${NC}"
+        echo ""
+        echo "Now connect with: popdroidcam connect <ip> [port]"
+        echo "(Use the port from 'Wireless debugging' screen, not the pairing port)"
+    else
+        echo -e "${RED}✗ Pairing failed${NC}"
+        exit 1
+    fi
+}
+
+cmd_disconnect() {
+    echo -e "${CYAN}Disconnecting all wireless devices...${NC}"
+    adb disconnect
+    echo -e "${GREEN}✓ Disconnected${NC}"
+}
+
 cmd_help() {
     echo "PopDroidCam - Use Android phone as webcam"
     echo ""
@@ -251,18 +338,27 @@ cmd_help() {
     echo "  status      Show current status"
     echo "  list        List available cameras on phone with resolutions"
     echo "  devices     List connected devices"
+    echo "  connect     Connect to phone over WiFi (wireless debugging)"
+    echo "  pair        Pair with phone for wireless debugging (first-time)"
+    echo "  disconnect  Disconnect wireless devices"
     echo "  help        Show this help"
     echo ""
     echo "Start options:"
     echo "  --res       Resolution: 720p, 1080p, 4k, or custom (e.g. 4080x3060)"
-    echo "  --fps       Frame rate: 10, 15, 20, 24, 30 (default), 60"
+    echo "  --fps       Frame rate: 10, 15, 20, 24, 30 (default)"
     echo "  --camera    Camera: back (default), front"
+    echo ""
+    echo "Wireless setup (one-time):"
+    echo "  1. Enable 'Wireless debugging' in Developer Options on phone"
+    echo "  2. popdroidcam pair <ip> <pairing-port> <code>"
+    echo "  3. popdroidcam connect <ip> <port>"
     echo ""
     echo "Examples:"
     echo "  popdroidcam start"
-    echo "  popdroidcam start --res 4k --fps 60"
+    echo "  popdroidcam start --res 4k --fps 30"
     echo "  popdroidcam start --res 4080x3060 --fps 30"
     echo "  popdroidcam start --camera front --res 3264x2448"
+    echo "  popdroidcam connect 192.168.1.100 5555"
     echo "  popdroidcam list"
     echo "  popdroidcam stop"
 }
@@ -283,6 +379,17 @@ case "${1:-}" in
         ;;
     devices)
         cmd_devices
+        ;;
+    connect)
+        shift
+        cmd_connect "$@"
+        ;;
+    pair)
+        shift
+        cmd_pair "$@"
+        ;;
+    disconnect)
+        cmd_disconnect
         ;;
     help|--help|-h)
         cmd_help
