@@ -6,6 +6,7 @@ Use your Android phone as a high-quality webcam on Linux over USB or WiFi.
 
 - **High resolution streaming** - 1080p, 4K, or native camera resolution (e.g., 4080x3060)
 - **Flexible frame rates** - 10, 15, 20, 24, 30 fps (device dependent)
+- **Camera lens selection** - Choose specific camera by ID (wide, ultrawide, telephoto)
 - **Works everywhere** - Zoom, Google Meet, Teams, OBS, Chrome, Firefox
 - **USB or WiFi** - Connect via cable or wireless debugging
 - **QR code pairing** - Easiest way to connect wirelessly
@@ -131,6 +132,7 @@ popdroidcam disconnect
 | `--res` | `720p`, `1080p`, `4k`, or custom (e.g., `4080x3060`) | `1080p` |
 | `--fps` | `10`, `15`, `20`, `24`, `30` (device dependent) | `30` |
 | `--camera` | `front`, `back` | `back` |
+| `--camera-id` | Camera ID for specific lens (see `popdroidcam list`) | - |
 | `--device` | Device serial (e.g., `10BF54084E002ZB` or `192.168.1.100:5555`) | Auto-detect |
 
 **Resolution presets:**
@@ -166,6 +168,29 @@ popdroidcam status
 popdroidcam stop
 ```
 
+### Camera Lens Selection
+
+Phones with multiple cameras (wide, ultrawide, telephoto) expose each as a separate camera ID. Use `--camera-id` to select a specific lens:
+
+```bash
+# List available cameras to see IDs
+popdroidcam list
+
+# Example output:
+#   Camera 0 (back) - Main camera
+#   Camera 1 (front) - Selfie camera  
+#   Camera 2 (back) - Wide angle
+#   Camera 3 (back) - Telephoto
+
+# Use specific camera by ID
+popdroidcam start --camera-id 0    # Main back camera
+popdroidcam start --camera-id 2    # Wide angle (if available)
+```
+
+In the TUI, enter the camera ID in the "Camera ID" field after clicking "Detect Cameras".
+
+> **Note**: `--camera` (back/front) is simpler but uses the default lens. Use `--camera-id` for specific lens control.
+
 ### Multiple Devices
 
 When multiple phones are connected, use `--device` to select which one:
@@ -196,9 +221,10 @@ After starting the stream, select **"Android Cam"** as your camera in:
 
 Run `popdroidcam` without arguments to launch the interactive interface:
 
-- **Camera tab**: Select device, camera, resolution, FPS, and start/stop stream
-- **Connect tab**: Pair and connect to phones over WiFi
+- **Camera tab**: Select device, camera/lens, resolution, FPS, and start/stop stream
+- **Connect tab**: Pair and connect to phones over WiFi (use `popdroidcam qr` for QR pairing)
 - Device dropdown auto-populates with connected phones (USB and WiFi)
+- Camera ID field for specific lens selection (click "Detect Cameras" first)
 - Real-time status display (shows if stream started via CLI too)
 - Press `r` to refresh status, `q` to quit
 

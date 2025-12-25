@@ -251,30 +251,29 @@ class CameraTUI(App):
         )
         with TabbedContent():
             with TabPane("Camera", id="camera_tab"):
-                yield Static("[bold]Select Device:[/bold]")
+                yield Static("[bold]Device:[/bold]")
                 yield Select([], id="device_select", prompt="Select device...")
                 yield Button("Refresh Devices", variant="primary", id="refresh_devices")
                 yield Static("")
                 yield Container(
-                    Static("Available Cameras: Detecting...", id="cameras_label"),
+                    Static("Available Cameras: Click 'Detect Cameras' after selecting device", id="cameras_label"),
                     classes="cameras-box"
                 )
-                yield Horizontal(
-                    Select.from_values(["back", "front"], value="back", id="camera_select"),
-                    Select.from_values(
-                        ["1920x1080", "3840x2160", "1280x720", "4080x3060", "3264x2448", "custom"],
-                        value="1920x1080",
-                        id="res_select"
-                    ),
-                    Select.from_values(["10", "15", "20", "24", "30"], value="30", id="fps_select"),
-                    classes="controls box"
+                yield Static("[bold]Camera Settings:[/bold]")
+                yield Static("Camera (back/front):")
+                yield Select.from_values(["back", "front"], value="back", id="camera_select")
+                yield Static("Camera ID (for specific lens - leave empty for default):")
+                yield Input(placeholder="e.g. 0, 1, 2 (see Detect Cameras)", id="camera_id")
+                yield Static("Resolution:")
+                yield Select.from_values(
+                    ["1920x1080", "3840x2160", "1280x720", "4080x3060", "3264x2448", "custom"],
+                    value="1920x1080",
+                    id="res_select"
                 )
-                yield Horizontal(
-                    Static("Custom resolution:", classes="label"),
-                    Input(placeholder="e.g. 4080x3060", id="custom_res"),
-                    classes="input-row",
-                    id="custom_res_row"
-                )
+                yield Static("Custom Resolution:", id="custom_res_label")
+                yield Input(placeholder="e.g. 4080x3060", id="custom_res")
+                yield Static("FPS:")
+                yield Select.from_values(["10", "15", "20", "24", "30"], value="30", id="fps_select")
                 yield Horizontal(
                     Button("Start Stream", variant="success", id="start"),
                     Button("Stop Stream", variant="error", id="stop"),
@@ -284,15 +283,14 @@ class CameraTUI(App):
             with TabPane("Connect", id="connect_tab"):
                 yield Static("[bold]Wireless Connection[/bold] - Connect to phone over WiFi")
                 yield Vertical(
-                    Static("[cyan]Option 1: QR Code Pairing (Easiest)[/cyan]"),
-                    Static("Phone: Wireless debugging → Pair device with QR code"),
-                    Button("Show QR Code", variant="primary", id="show_qr_btn"),
+                    Static("[cyan]QR Code Pairing (Easiest)[/cyan]"),
+                    Static("Run in terminal: [bold]popdroidcam qr[/bold]"),
+                    Static("Then scan with phone: Wireless debugging → Pair with QR code"),
                     id="qr_section"
                 )
                 yield Vertical(
-                    Static("[cyan]Option 2: Manual Pairing[/cyan]"),
+                    Static("[cyan]Manual Pairing[/cyan]"),
                     Static("Phone: Settings → Developer Options → Wireless debugging → Pair device"),
-                    Static(""),
                     Static("IP Address:"),
                     Input(placeholder="192.168.1.100", id="pair_ip"),
                     Static("Pairing Port:"),
@@ -303,9 +301,8 @@ class CameraTUI(App):
                     id="pair_section"
                 )
                 yield Vertical(
-                    Static("[cyan]Step 2: Connect[/cyan]"),
-                    Static("Phone: Use IP:Port shown on Wireless debugging main screen"),
-                    Static(""),
+                    Static("[cyan]Connect (after pairing)[/cyan]"),
+                    Static("Use IP:Port from Wireless debugging main screen"),
                     Static("IP Address:"),
                     Input(placeholder="192.168.1.100", id="connect_ip"),
                     Static("Connection Port:"),
@@ -323,17 +320,21 @@ class CameraTUI(App):
         self.update_status()
         self.refresh_devices()
         self.log_message("Ready. Connect phone via USB or WiFi.")
-        self.log_message("For WiFi: Go to 'Connect' tab to pair and connect.")
-        self.query_one("#custom_res_row", Horizontal).display = False
+        self.log_message("For WiFi: Go to 'Connect' tab or run 'popdroidcam qr'")
+        self.query_one("#custom_res_label", Static).display = False
+        self.query_one("#custom_res", Input).display = False
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "res_select":
-            custom_row = self.query_one("#custom_res_row", Horizontal)
+            custom_label = self.query_one("#custom_res_label", Static)
+            custom_input = self.query_one("#custom_res", Input)
             if event.value == "custom":
-                custom_row.display = True
+                custom_label.display = True
+                custom_input.display = True
                 self.log_message("Enter custom resolution in WIDTHxHEIGHT format")
             else:
-                custom_row.display = False
+                custom_label.display = False
+                custom_input.display = False
 
     def action_refresh(self) -> None:
         self.update_status()
@@ -420,8 +421,6 @@ class CameraTUI(App):
             self.do_disconnect()
         elif event.button.id == "refresh_devices":
             self.refresh_devices()
-        elif event.button.id == "show_qr_btn":
-            self.show_qr_code()
 
     def do_pair(self):
         ip = self.query_one("#pair_ip", Input).value.strip()
@@ -469,38 +468,6 @@ class CameraTUI(App):
         self.log_message("[green]✓ Disconnected all wireless devices[/green]")
         self.update_status()
 
-    def show_qr_code(self):
-        from random import randint
-        try:
-            import qrcode
-        except ImportError:
-            self.log_message("[red]qrcode not installed. Run: pip install qrcode[pil][/red]")
-            return
-        
-        password = randint(100000, 999999)
-        qr_data = f"WIFI:T:ADB;S:popdroidcam;P:{password};;"
-        
-        qr = qrcode.QRCode(border=1, box_size=1)
-        qr.add_data(qr_data)
-        qr.make(fit=True)
-        
-        self.log_message("")
-        self.log_message("[bold cyan]=== Scan this QR code with your phone ===[/bold cyan]")
-        self.log_message("Phone → Wireless debugging → Pair device with QR code")
-        self.log_message("")
-        
-        matrix = qr.get_matrix()
-        for row in matrix:
-            line = ""
-            for cell in row:
-                line += "##" if cell else "  "
-            self.log_message(line)
-        
-        self.log_message("")
-        self.log_message(f"[yellow]Pairing code: {password}[/yellow]")
-        self.log_message("[yellow]NOTE: QR scanning in TUI may not work - use 'popdroidcam qr' in terminal instead[/yellow]")
-        self.log_message("After pairing, use 'Connect' section below with the port from phone")
-
     def refresh_devices(self):
         device_select = self.query_one("#device_select", Select)
         devices = get_device_status()
@@ -525,6 +492,7 @@ class CameraTUI(App):
         device_select = self.query_one("#device_select", Select)
         selected_device = device_select.value
         camera = self.query_one("#camera_select", Select).value
+        camera_id = self.query_one("#camera_id", Input).value.strip()
         res_select = self.query_one("#res_select", Select).value
         fps = self.query_one("#fps_select", Select).value
 
@@ -542,13 +510,18 @@ class CameraTUI(App):
         cmd = [
             "scrcpy",
             "--video-source=camera",
-            f"--camera-facing={camera}",
             f"--camera-size={res}",
             f"--camera-fps={fps}",
             f"--v4l2-sink={v4l2_device}",
             "--no-window",
             "--no-audio"
         ]
+
+        if camera_id:
+            cmd.append(f"--camera-id={camera_id}")
+            self.log_message(f"Using camera ID: {camera_id}")
+        else:
+            cmd.append(f"--camera-facing={camera}")
 
         if selected_device and selected_device != Select.BLANK:
             cmd.append(f"--serial={selected_device}")
