@@ -77,6 +77,16 @@ popdroidcam help
 | `--fps` | `10`, `15`, `20`, `24`, `30` (device dependent) | `30` |
 | `--camera` | `front`, `back` | `back` |
 
+**Resolution presets:**
+| Preset | Resolves to |
+|--------|-------------|
+| `720p` | 1280x720 |
+| `1080p` | 1920x1080 |
+| `4k` | 3840x2160 |
+| Custom | Pass exact `WxH` (e.g., `4080x3060`) |
+
+> **Tip**: Use `popdroidcam list` to see your phone's native camera resolutions and supported FPS values.
+
 ### Examples
 
 ```bash
