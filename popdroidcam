@@ -1,0 +1,303 @@
+#!/bin/bash
+
+STATE_DIR="$HOME/.local/state/popdroidcam"
+PID_FILE="$STATE_DIR/pid"
+CONFIG_FILE="$STATE_DIR/config"
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+
+mkdir -p "$STATE_DIR"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+find_v4l2_device() {
+    for name_file in /sys/devices/virtual/video4linux/video*/name; do
+        if [ -f "$name_file" ]; then
+            name=$(cat "$name_file" 2>/dev/null)
+            if [[ "$name" == *"Android"* ]] || [[ "$name" == *"v4l2loopback"* ]]; then
+                device=$(basename "$(dirname "$name_file")")
+                echo "/dev/$device"
+                return 0
+            fi
+        fi
+    done
+    echo "/dev/video6"
+}
+
+ensure_v4l2loopback() {
+    if ! lsmod | grep -q v4l2loopback; then
+        echo -e "${YELLOW}Loading v4l2loopback module...${NC}"
+        sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
+        sleep 1
+    fi
+}
+
+is_running() {
+    if [ -f "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE")
+        if ps -p "$pid" > /dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+cmd_start() {
+    if is_running; then
+        echo -e "${YELLOW}Camera already running (PID: $(cat "$PID_FILE"))${NC}"
+        echo "Use 'popdroidcam stop' to stop it first."
+        exit 1
+    fi
+
+    local res="1920x1080"
+    local fps="30"
+    local camera="back"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --res)
+                case $2 in
+                    1080p|1080) res="1920x1080" ;;
+                    4k|4K|2160p) res="3840x2160" ;;
+                    720p|720) res="1280x720" ;;
+                    *) res="$2" ;;
+                esac
+                shift 2
+                ;;
+            --fps)
+                fps="$2"
+                shift 2
+                ;;
+            --camera)
+                camera="$2"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    if ! adb devices 2>/dev/null | grep -q "\sdevice$"; then
+        echo -e "${RED}No Android device connected or authorized.${NC}"
+        echo "Enable USB debugging and reconnect your phone."
+        exit 1
+    fi
+
+    ensure_v4l2loopback
+    local v4l2_device=$(find_v4l2_device)
+
+    echo -e "${CYAN}Starting camera stream...${NC}"
+    echo "  Resolution: $res"
+    echo "  FPS: $fps"
+    echo "  Camera: $camera"
+    echo "  Device: $v4l2_device"
+
+    nohup scrcpy \
+        --video-source=camera \
+        --camera-facing="$camera" \
+        --camera-size="$res" \
+        --camera-fps="$fps" \
+        --v4l2-sink="$v4l2_device" \
+        --no-playback \
+        --no-audio \
+        > "$STATE_DIR/scrcpy.log" 2>&1 &
+
+    local pid=$!
+    sleep 2
+
+    if ps -p $pid > /dev/null 2>&1; then
+        echo "$pid" > "$PID_FILE"
+        echo "res=$res" > "$CONFIG_FILE"
+        echo "fps=$fps" >> "$CONFIG_FILE"
+        echo "camera=$camera" >> "$CONFIG_FILE"
+        echo "device=$v4l2_device" >> "$CONFIG_FILE"
+        echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
+        
+        echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
+        echo "Select 'Android Cam' in your video apps."
+    else
+        echo -e "${RED}✗ Failed to start camera${NC}"
+        echo "Check logs: cat $STATE_DIR/scrcpy.log"
+        exit 1
+    fi
+}
+
+cmd_stop() {
+    if ! is_running; then
+        echo -e "${YELLOW}Camera is not running.${NC}"
+        exit 0
+    fi
+
+    local pid=$(cat "$PID_FILE")
+    echo -e "${CYAN}Stopping camera (PID: $pid)...${NC}"
+    kill "$pid" 2>/dev/null
+    sleep 1
+
+    if ps -p "$pid" > /dev/null 2>&1; then
+        kill -9 "$pid" 2>/dev/null
+    fi
+
+    rm -f "$PID_FILE"
+    echo -e "${GREEN}✓ Camera stopped${NC}"
+}
+
+cmd_status() {
+    echo -e "${CYAN}=== PopDroidCam Status ===${NC}"
+    echo ""
+
+    if is_running; then
+        local pid=$(cat "$PID_FILE")
+        echo -e "Stream: ${GREEN}Running${NC} (PID: $pid)"
+        
+        if [ -f "$CONFIG_FILE" ]; then
+            echo ""
+            echo "Current settings:"
+            while IFS='=' read -r key value; do
+                printf "  %-10s %s\n" "$key:" "$value"
+            done < "$CONFIG_FILE"
+        fi
+    else
+        echo -e "Stream: ${RED}Stopped${NC}"
+    fi
+
+    echo ""
+    echo "Device:"
+    if adb devices 2>/dev/null | grep -q "\sdevice$"; then
+        local device=$(adb devices | grep "\sdevice$" | head -1 | cut -f1)
+        echo -e "  Phone: ${GREEN}Connected${NC} ($device)"
+    else
+        echo -e "  Phone: ${RED}Not connected${NC}"
+    fi
+
+    local v4l2_device=$(find_v4l2_device)
+    if [ -e "$v4l2_device" ]; then
+        echo -e "  V4L2:  ${GREEN}$v4l2_device${NC}"
+    else
+        echo -e "  V4L2:  ${RED}Not found${NC}"
+    fi
+}
+
+cmd_list() {
+    echo -e "${CYAN}=== Available Cameras ===${NC}"
+    echo ""
+    
+    if ! adb devices 2>/dev/null | grep -q "\sdevice$"; then
+        echo -e "${RED}No Android device connected.${NC}"
+        exit 1
+    fi
+
+    local output=$(scrcpy --video-source=camera --list-cameras 2>&1)
+    
+    local device_info=$(echo "$output" | grep -E "^\[server\] INFO: Device:" | sed 's/\[server\] INFO: Device: //')
+    if [ -n "$device_info" ]; then
+        echo -e "Device: ${GREEN}$device_info${NC}"
+        echo ""
+    fi
+
+    echo "Available cameras:"
+    echo "$output" | grep -E "^\s+--camera-id=" | while read line; do
+        local id=$(echo "$line" | grep -oP 'camera-id=\K[0-9]+')
+        local facing=$(echo "$line" | grep -oP '\(\K[^,]+')
+        local resolution=$(echo "$line" | grep -oP ', \K[0-9]+x[0-9]+')
+        local fps_list=$(echo "$line" | grep -oP 'fps=\[\K[^\]]+')
+        
+        echo ""
+        echo -e "  ${CYAN}Camera $id${NC} ($facing)"
+        echo "    Max Resolution: $resolution"
+        echo "    Supported FPS:  $fps_list"
+        echo "    Usage: popdroidcam start --camera $facing --res $resolution"
+    done
+    
+    echo ""
+    echo -e "${YELLOW}Tip:${NC} Use --res with custom resolution like --res 4080x3060"
+}
+
+cmd_devices() {
+    echo -e "${CYAN}=== Connected Devices ===${NC}"
+    echo ""
+    
+    echo "Android devices:"
+    adb devices -l 2>/dev/null | tail -n +2 | while read line; do
+        if [ -n "$line" ]; then
+            echo "  $line"
+        fi
+    done
+
+    echo ""
+    echo "Video devices:"
+    v4l2-ctl --list-devices 2>/dev/null || echo "  v4l2-ctl not available"
+}
+
+cmd_help() {
+    echo "PopDroidCam - Use Android phone as webcam"
+    echo ""
+    echo "Usage: popdroidcam [command] [options]"
+    echo ""
+    echo "Commands:"
+    echo "  (none)      Launch interactive TUI"
+    echo "  start       Start camera stream in background"
+    echo "  stop        Stop camera stream"
+    echo "  status      Show current status"
+    echo "  list        List available cameras on phone with resolutions"
+    echo "  devices     List connected devices"
+    echo "  help        Show this help"
+    echo ""
+    echo "Start options:"
+    echo "  --res       Resolution: 720p, 1080p, 4k, or custom (e.g. 4080x3060)"
+    echo "  --fps       Frame rate: 10, 15, 20, 24, 30 (default), 60"
+    echo "  --camera    Camera: back (default), front"
+    echo ""
+    echo "Examples:"
+    echo "  popdroidcam start"
+    echo "  popdroidcam start --res 4k --fps 60"
+    echo "  popdroidcam start --res 4080x3060 --fps 30"
+    echo "  popdroidcam start --camera front --res 3264x2448"
+    echo "  popdroidcam list"
+    echo "  popdroidcam stop"
+}
+
+case "${1:-}" in
+    start)
+        shift
+        cmd_start "$@"
+        ;;
+    stop)
+        cmd_stop
+        ;;
+    status)
+        cmd_status
+        ;;
+    list)
+        cmd_list
+        ;;
+    devices)
+        cmd_devices
+        ;;
+    help|--help|-h)
+        cmd_help
+        ;;
+    "")
+        ensure_v4l2loopback
+        cd "$SCRIPT_DIR"
+        if [ -d "venv" ]; then
+            source venv/bin/activate
+        fi
+        python3 cam_tui.py
+        ;;
+    *)
+        echo "Unknown command: $1"
+        echo "Run 'popdroidcam help' for usage."
+        exit 1
+        ;;
+esac
