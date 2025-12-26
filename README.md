@@ -591,6 +591,16 @@ For full virtual webcam functionality, a native Linux installation is recommende
 
 ## Uninstall
 
+### One-Line Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/uninstall-remote.sh | bash
+```
+
+### Local Uninstall
+
+If you have the source code:
+
 ```bash
 ./uninstall.sh
 ```
