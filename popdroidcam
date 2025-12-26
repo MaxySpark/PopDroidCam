@@ -225,7 +225,8 @@ cmd_list() {
         exit 1
     fi
 
-    local output=$(scrcpy --video-source=camera --list-cameras 2>&1)
+    # Get detailed camera sizes
+    local output=$(scrcpy --video-source=camera --list-camera-sizes 2>&1)
     
     local device_info=$(echo "$output" | grep -E "^\[server\] INFO: Device:" | sed 's/\[server\] INFO: Device: //')
     if [ -n "$device_info" ]; then
@@ -234,21 +235,39 @@ cmd_list() {
     fi
 
     echo "Available cameras:"
-    echo "$output" | grep -E "^\s+--camera-id=" | while read line; do
-        local id=$(echo "$line" | grep -oP 'camera-id=\K[0-9]+')
-        local facing=$(echo "$line" | grep -oP '\(\K[^,]+')
-        local resolution=$(echo "$line" | grep -oP ', \K[0-9]+x[0-9]+')
-        local fps_list=$(echo "$line" | grep -oP 'fps=\[\K[^\]]+')
-        
-        echo ""
-        echo -e "  ${CYAN}Camera $id${NC} ($facing)"
-        echo "    Max Resolution: $resolution"
-        echo "    Supported FPS:  $fps_list"
-        echo "    Usage: popdroidcam start --camera $facing --res $resolution"
+    
+    local current_cam=""
+    echo "$output" | while IFS= read -r line; do
+        # Camera header line
+        if [[ "$line" =~ --camera-id=([0-9]+).*\(([^,]+),.*fps=\[([^\]]+)\] ]]; then
+            local id="${BASH_REMATCH[1]}"
+            local facing="${BASH_REMATCH[2]}"
+            local fps_list="${BASH_REMATCH[3]}"
+            echo ""
+            echo -e "  ${CYAN}Camera $id${NC} ($facing)"
+            echo "    FPS: $fps_list"
+            echo "    Resolutions:"
+            current_cam="$id"
+        # Resolution line
+        elif [[ "$line" =~ ^[[:space:]]+-[[:space:]]+([0-9]+x[0-9]+) ]]; then
+            local res="${BASH_REMATCH[1]}"
+            # Highlight recommended resolutions
+            if [[ "$res" == "1920x1080" || "$res" == "1280x720" || "$res" == "3840x2160" ]]; then
+                echo -e "      ${GREEN}$res${NC} (recommended)"
+            else
+                echo "      $res"
+            fi
+        fi
     done
     
     echo ""
-    echo -e "${YELLOW}Tip:${NC} Use --res with custom resolution like --res 4080x3060"
+    echo -e "${YELLOW}Recommended resolutions:${NC}"
+    echo "  1920x1080 (1080p) - Best compatibility"
+    echo "  1280x720 (720p)   - Lower bandwidth"
+    echo "  3840x2160 (4K)    - If your phone supports it"
+    echo ""
+    echo -e "${YELLOW}Note:${NC} Native camera resolution (e.g. 4080x3060) may fail due to"
+    echo "      hardware encoder limitations. Use recommended resolutions for best results."
 }
 
 cmd_devices() {
@@ -354,10 +373,28 @@ cmd_disconnect() {
 
 cmd_qr() {
     cd "$SCRIPT_DIR"
-    if [ -d "venv" ]; then
-        source venv/bin/activate
+    bun run src/qr-pair.ts
+}
+
+cmd_ui() {
+    ensure_v4l2loopback
+    cd "$SCRIPT_DIR"
+    bun run src/gui/server.ts
+}
+
+cmd_desktop() {
+    ensure_v4l2loopback
+    cd "$SCRIPT_DIR"
+    
+    # Check if dist exists, if not build first
+    if [ ! -f "dist/desktop/main.js" ]; then
+        echo -e "${CYAN}Building desktop app...${NC}"
+        bun run desktop:build
     fi
-    python3 qr_pair.py
+    
+    # Launch electron
+    echo -e "${GREEN}Launching PopDroidCam Desktop...${NC}"
+    npx electron dist/desktop/main.js &
 }
 
 cmd_help() {
@@ -367,6 +404,8 @@ cmd_help() {
     echo ""
     echo "Commands:"
     echo "  (none)      Launch interactive TUI"
+    echo "  desktop     Launch desktop GUI app (Electron)"
+    echo "  ui          Launch web-based GUI (opens in browser)"
     echo "  start       Start camera stream in background"
     echo "  stop        Stop camera stream"
     echo "  status      Show current status"
@@ -400,6 +439,7 @@ cmd_help() {
     echo "    popdroidcam connect <ip> <port>"
     echo ""
     echo "Examples:"
+    echo "  popdroidcam desktop                    # Launch desktop app"
     echo "  popdroidcam start"
     echo "  popdroidcam start --res 4k --fps 30"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
@@ -430,6 +470,12 @@ case "${1:-}" in
     qr)
         cmd_qr
         ;;
+    ui)
+        cmd_ui
+        ;;
+    desktop)
+        cmd_desktop
+        ;;
     connect)
         shift
         cmd_connect "$@"
@@ -447,10 +493,7 @@ case "${1:-}" in
     "")
         ensure_v4l2loopback
         cd "$SCRIPT_DIR"
-        if [ -d "venv" ]; then
-            source venv/bin/activate
-        fi
-        python3 cam_tui.py
+        bun run src/index.tsx
         ;;
     *)
         echo "Unknown command: $1"

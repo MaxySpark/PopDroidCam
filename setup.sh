@@ -16,13 +16,27 @@ sudo apt install -y \
     libsdl2-dev libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
     libswresample-dev libusb-1.0-0 libusb-1.0-0-dev \
     v4l2loopback-dkms v4l2loopback-utils \
-    python3-full python3-venv
+    curl unzip
 
-echo ">>> Creating Python virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install textual qrcode[pil] zeroconf colorama
+echo ">>> Installing Bun..."
+if ! command -v bun &> /dev/null; then
+    curl -fsSL https://bun.sh/install | bash
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+fi
+
+echo ">>> Installing pnpm..."
+if ! command -v pnpm &> /dev/null; then
+    curl -fsSL https://get.pnpm.io/install.sh | sh -
+    export PNPM_HOME="$HOME/.local/share/pnpm"
+    export PATH="$PNPM_HOME:$PATH"
+fi
+
+echo ">>> Installing Node.js dependencies..."
+pnpm install
+
+echo ">>> Building desktop app..."
+pnpm run desktop:build
 
 echo ">>> Setting up build directory..."
 mkdir -p build_scrcpy
@@ -72,12 +86,14 @@ sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1 || true
 
 echo ">>> Verifying installation..."
 scrcpy --version
+bun --version
 
 echo ""
 echo "=== Setup Complete! ==="
 echo ""
 echo "Usage:"
 echo "  popdroidcam          - Launch interactive TUI"
+echo "  popdroidcam desktop  - Launch desktop GUI app"
 echo "  popdroidcam start    - Start camera in background"
 echo "  popdroidcam stop     - Stop camera"
 echo "  popdroidcam status   - Check status"
