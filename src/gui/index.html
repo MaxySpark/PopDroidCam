@@ -402,7 +402,8 @@
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cam = devices.find(d => 
           d.kind === 'videoinput' && d.label && 
-          (d.label.toLowerCase().includes('android') || 
+          (d.label.toLowerCase().includes('popdroidcam') ||
+           d.label.toLowerCase().includes('android') || 
            d.label.toLowerCase().includes('v4l2') ||
            d.label.toLowerCase().includes('virtual'))
         );
