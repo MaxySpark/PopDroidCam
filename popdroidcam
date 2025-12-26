@@ -24,7 +24,7 @@ find_v4l2_device() {
     for name_file in /sys/devices/virtual/video4linux/video*/name; do
         if [ -f "$name_file" ]; then
             name=$(cat "$name_file" 2>/dev/null)
-            if [[ "$name" == *"Android"* ]] || [[ "$name" == *"v4l2loopback"* ]]; then
+            if [[ "$name" == *"PopDroidCam"* ]] || [[ "$name" == *"v4l2loopback"* ]]; then
                 device=$(basename "$(dirname "$name_file")")
                 echo "/dev/$device"
                 return 0
@@ -37,7 +37,7 @@ find_v4l2_device() {
 ensure_v4l2loopback() {
     if ! lsmod | grep -q v4l2loopback; then
         echo -e "${YELLOW}Loading v4l2loopback module...${NC}"
-        sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
+        sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
         sleep 1
     fi
 }
@@ -179,7 +179,7 @@ cmd_start() {
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
-        echo "Select 'Android Cam' in your video apps."
+        echo "Select 'PopDroidCam' in your video apps."
     else
         echo -e "${RED}✗ Failed to start camera${NC}"
         echo "Check logs: cat $STATE_DIR/scrcpy.log"

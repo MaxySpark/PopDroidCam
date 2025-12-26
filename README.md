@@ -33,7 +33,7 @@ popdroidcam desktop
 # Or start streaming from CLI
 popdroidcam start
 
-# 4. Select "Android Cam" in your video app
+# 4. Select "PopDroidCam" in your video app
 ```
 
 ## Prerequisites
@@ -132,7 +132,7 @@ curl -fsSL https://bun.sh/install | bash
 curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 # Load v4l2loopback
-sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
+sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
 ```
 
 Then build scrcpy 2.x from source (see [scrcpy build instructions](https://github.com/Genymobile/scrcpy/blob/master/doc/linux.md#build)).
@@ -402,11 +402,11 @@ popdroidcam start --device 192.168.1.100:5555
 
 ## Using in Apps
 
-After starting the stream, select **"Android Cam"** as your camera in:
+After starting the stream, select **"PopDroidCam"** as your camera in:
 
 - **Browser** (Chrome, Firefox) - video calls
 - **Zoom / Google Meet / Teams**
-- **OBS Studio** - Video Capture Device → Android Cam
+- **OBS Studio** - Video Capture Device → PopDroidCam
 - Any app that uses webcam
 
 ## Building Desktop Releases
@@ -454,7 +454,7 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 
 ## Troubleshooting
 
-### "Android Cam" not showing in apps
+### "PopDroidCam" not showing in apps
 
 1. Check stream is running:
    ```bash
@@ -468,7 +468,7 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 
 3. If not loaded:
    ```bash
-   sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
+   sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
    ```
 
 4. Restart your video app after starting the stream
@@ -586,7 +586,7 @@ For full virtual webcam functionality, a native Linux installation is recommende
 ```
 
 1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
-2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`) named "Android Cam"
+2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`) named "PopDroidCam"
 3. **popdroidcam** manages the stream and provides CLI/TUI/Desktop/Web interfaces
 
 ## Uninstall

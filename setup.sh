@@ -85,7 +85,7 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 fi
 
 echo ">>> Loading v4l2loopback module..."
-sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1 || true
+sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1 || true
 
 echo ">>> Verifying installation..."
 scrcpy --version
