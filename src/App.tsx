@@ -12,12 +12,16 @@ import {
   adbPair,
   adbDisconnect,
   PREFERRED_RESOLUTIONS,
+  ROTATION_OPTIONS,
+  VIDEO_QUALITY_OPTIONS,
   type Device,
   type Camera,
+  type Rotation,
+  type VideoQuality,
 } from "./utils.js";
 
 type Tab = "camera" | "connect";
-type CameraFocus = "device" | "camera" | "resolution" | "fps" | "actions";
+type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "actions";
 type ConnectFocus = "pair_ip" | "pair_port" | "pair_code" | "conn_ip" | "conn_port" | "actions";
 
 interface LogEntry {
@@ -90,6 +94,8 @@ function App() {
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedResolution, setSelectedResolution] = useState<string>("1920x1080");
   const [selectedFps, setSelectedFps] = useState<string>("30");
+  const [selectedRotation, setSelectedRotation] = useState<Rotation>("0");
+  const [selectedQuality, setSelectedQuality] = useState<VideoQuality>("high");
 
   const [streamRunning, setStreamRunning] = useState(false);
   const [streamConfig, setStreamConfig] = useState<Record<string, string>>({});
@@ -172,12 +178,14 @@ function App() {
       return;
     }
 
-    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps...`);
+    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}...`);
     const result = startStream({
       cameraId: selectedCamera,
       resolution: selectedResolution,
       fps: selectedFps,
       serial: selectedDevice || undefined,
+      rotation: selectedRotation,
+      quality: selectedQuality,
     });
 
     if (result.success) {
@@ -186,7 +194,7 @@ function App() {
     } else {
       log(`Error: ${result.error}`, "error");
     }
-  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedDevice, log, refreshStatus]);
+  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedRotation, selectedDevice, log, refreshStatus]);
 
   const handleStop = useCallback(() => {
     if (stopStream()) {
@@ -241,7 +249,7 @@ function App() {
     : [];
   const fpsOptions: string[] = currentCamera ? currentCamera.fps : [];
 
-  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "actions"];
+  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "actions"];
   const connectFocusOrder: ConnectFocus[] = ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port", "actions"];
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
@@ -294,6 +302,8 @@ function App() {
       if (input === "l") { setTab("camera"); setCameraFocus("camera"); return; }
       if (input === "e") { setTab("camera"); setCameraFocus("resolution"); return; }
       if (input === "f") { setTab("camera"); setCameraFocus("fps"); return; }
+      if (input === "t") { setTab("camera"); setCameraFocus("rotation"); return; }
+      if (input === "q") { setTab("camera"); setCameraFocus("quality"); return; }
       if (input === "a") { setTab("camera"); setCameraFocus("actions"); return; }
       if (input === "p") { setTab("connect"); setConnectFocus("pair_ip"); return; }
       if (input === "o") { setTab("connect"); setConnectFocus("conn_ip"); return; }
@@ -338,6 +348,10 @@ function App() {
           setSelectedResolution(cycleValue(resolutions, selectedResolution, dir));
         } else if (cameraFocus === "fps") {
           setSelectedFps(cycleValue(fpsOptions, selectedFps, dir));
+        } else if (cameraFocus === "rotation") {
+          setSelectedRotation(cycleValue(ROTATION_OPTIONS, selectedRotation, dir) as Rotation);
+        } else if (cameraFocus === "quality") {
+          setSelectedQuality(cycleValue(VIDEO_QUALITY_OPTIONS, selectedQuality, dir) as VideoQuality);
         } else if (cameraFocus === "actions") {
           setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }
@@ -379,7 +393,8 @@ function App() {
   const getDeviceDisplay = () => {
     const dev = devices.find(d => d.serial === selectedDevice);
     if (!dev) return selectedDevice || "--";
-    return `${dev.serial.slice(0, 20)} (${dev.type})`;
+    const name = dev.model || dev.serial.slice(0, 20);
+    return `${name} (${dev.type})`;
   };
 
   const getCameraDisplay = () => {
@@ -395,15 +410,15 @@ function App() {
   };
 
   const statusDevice = devices.length > 0 
-    ? `${devices[0].type}: ${devices[0].serial.slice(0, 18)}`
+    ? `${devices[0].type}: ${devices[0].model || devices[0].serial.slice(0, 18)}`
     : "No device";
   const statusStream = streamRunning 
-    ? `Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps`
+    ? `Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps${streamConfig.quality ? ` ${streamConfig.quality}` : ""}`
     : "Stopped";
 
   const shortcutHelp = tab === "camera" 
-    ? "^D:device ^L:cam ^E:res ^F:fps | s:start x:stop r:refresh q:quit"
-    : "^P:pair ^O:conn | Esc:exit input | r:refresh q:quit";
+    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual | s:start x:stop r:refresh"
+    : "^P:pair ^O:conn | Esc:exit input | r:refresh";
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1} height={terminalHeight}>
@@ -463,6 +478,24 @@ function App() {
                 items={fpsOptions}
                 selected={selectedFps}
                 focused={cameraFocus === "fps"}
+              />
+            </Box>
+            <Box width={24}>
+              <InlineSelector
+                label="Rotate"
+                shortcut="^T"
+                items={ROTATION_OPTIONS.map(r => `${r}°`)}
+                selected={`${selectedRotation}°`}
+                focused={cameraFocus === "rotation"}
+              />
+            </Box>
+            <Box width={24}>
+              <InlineSelector
+                label="Quality"
+                shortcut="^Q"
+                items={VIDEO_QUALITY_OPTIONS}
+                selected={selectedQuality}
+                focused={cameraFocus === "quality"}
               />
             </Box>
           </Box>

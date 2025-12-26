@@ -64,6 +64,9 @@ cmd_start() {
     local camera="back"
     local camera_id=""
     local device=""
+    local rotation="0"
+    local quality="high"
+    local bitrate="16M"
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -92,6 +95,28 @@ cmd_start() {
                 device="$2"
                 shift 2
                 ;;
+            --rotation|--rotate)
+                case $2 in
+                    0|90|180|270) rotation="$2" ;;
+                    *) echo -e "${RED}Invalid rotation. Use 0, 90, 180, or 270.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
+            --quality|-q)
+                case $2 in
+                    low) quality="low"; bitrate="4M" ;;
+                    medium) quality="medium"; bitrate="8M" ;;
+                    high) quality="high"; bitrate="16M" ;;
+                    ultra) quality="ultra"; bitrate="32M" ;;
+                    *) echo -e "${RED}Invalid quality. Use low, medium, high, or ultra.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
+            --bitrate|-b)
+                bitrate="$2"
+                quality="custom"
+                shift 2
+                ;;
             *)
                 shift
                 ;;
@@ -110,17 +135,21 @@ cmd_start() {
     echo -e "${CYAN}Starting camera stream...${NC}"
     echo "  Resolution: $res"
     echo "  FPS: $fps"
+    echo "  Quality: $quality ($bitrate)"
     if [ -n "$camera_id" ]; then
         echo "  Camera ID: $camera_id"
     else
         echo "  Camera: $camera"
     fi
     echo "  Device: $v4l2_device"
+    if [ "$rotation" != "0" ]; then
+        echo "  Rotation: ${rotation}°"
+    fi
     if [ -n "$device" ]; then
         echo "  Phone: $device"
     fi
 
-    local scrcpy_cmd="scrcpy --video-source=camera --camera-size=$res --camera-fps=$fps --v4l2-sink=$v4l2_device --no-window --no-audio"
+    local scrcpy_cmd="scrcpy --video-source=camera --camera-size=$res --camera-fps=$fps --video-bit-rate=$bitrate --v4l2-sink=$v4l2_device --no-window --no-audio"
     if [ -n "$camera_id" ]; then
         scrcpy_cmd="$scrcpy_cmd --camera-id=$camera_id"
     else
@@ -128,6 +157,9 @@ cmd_start() {
     fi
     if [ -n "$device" ]; then
         scrcpy_cmd="$scrcpy_cmd --serial=$device"
+    fi
+    if [ "$rotation" != "0" ]; then
+        scrcpy_cmd="$scrcpy_cmd --capture-orientation=$rotation"
     fi
 
     nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
@@ -141,6 +173,9 @@ cmd_start() {
         echo "fps=$fps" >> "$CONFIG_FILE"
         echo "camera=$camera" >> "$CONFIG_FILE"
         echo "device=$v4l2_device" >> "$CONFIG_FILE"
+        echo "rotation=$rotation" >> "$CONFIG_FILE"
+        echo "quality=$quality" >> "$CONFIG_FILE"
+        echo "bitrate=$bitrate" >> "$CONFIG_FILE"
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
@@ -277,7 +312,15 @@ cmd_devices() {
     echo "Android devices:"
     adb devices -l 2>/dev/null | tail -n +2 | while read line; do
         if [ -n "$line" ]; then
-            echo "  $line"
+            local serial=$(echo "$line" | awk '{print $1}')
+            local state=$(echo "$line" | awk '{print $2}')
+            local model=$(echo "$line" | grep -oP 'model:\K\S+' | tr '_' ' ')
+            
+            if [ -n "$model" ]; then
+                echo -e "  ${GREEN}$model${NC} ($serial) - $state"
+            else
+                echo "  $serial - $state"
+            fi
         fi
     done
 
@@ -422,7 +465,16 @@ cmd_help() {
     echo "  --fps         Frame rate: 10, 15, 20, 24, 30 (default)"
     echo "  --camera      Camera facing: back (default), front"
     echo "  --camera-id   Camera ID for specific lens (use 'list' to see IDs)"
+    echo "  --rotation    Rotate camera: 0 (default), 90, 180, 270"
+    echo "  --quality     Video quality: low (4M), medium (8M), high (16M, default), ultra (32M)"
+    echo "  --bitrate     Custom bitrate (e.g. 20M, 25M) - overrides --quality"
     echo "  --device      Select device by serial (for multiple phones)"
+    echo ""
+    echo "Quality presets:"
+    echo "  low     4 Mbps   - Lower quality, saves bandwidth"
+    echo "  medium  8 Mbps   - Balanced (scrcpy default)"
+    echo "  high    16 Mbps  - Good quality (recommended)"
+    echo "  ultra   32 Mbps  - Best quality, highest bandwidth"
     echo ""
     echo "Camera selection:"
     echo "  Use --camera for simple back/front selection."
@@ -442,6 +494,8 @@ cmd_help() {
     echo "  popdroidcam desktop                    # Launch desktop app"
     echo "  popdroidcam start"
     echo "  popdroidcam start --res 4k --fps 30"
+    echo "  popdroidcam start --quality ultra      # Best quality"
+    echo "  popdroidcam start --bitrate 20M        # Custom bitrate"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
     echo "  popdroidcam start --camera-id 2        # Use another lens (e.g. wide)"
     echo "  popdroidcam start --device 192.168.1.100:5555"

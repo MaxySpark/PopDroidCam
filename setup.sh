@@ -35,6 +35,9 @@ fi
 echo ">>> Installing Node.js dependencies..."
 pnpm install
 
+echo ">>> Setting up Electron..."
+node node_modules/electron/install.js
+
 echo ">>> Building desktop app..."
 pnpm run desktop:build
 
