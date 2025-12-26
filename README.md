@@ -12,6 +12,7 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 - **QR code pairing** - Easy wireless setup
 - **Multi-camera support** - Choose between back, front, wide, ultrawide lenses
 - **Works everywhere** - Zoom, Meet, Teams, OBS, Chrome, Firefox
+- **Desktop App** - Native Electron GUI with live preview
 - **CLI + TUI** - Command-line and interactive terminal interface
 - **Background mode** - No window, no dock icon
 
@@ -25,7 +26,10 @@ cd PopDroidCamera
 
 # 2. Connect phone via USB with debugging enabled
 
-# 3. Start streaming
+# 3. Launch desktop app
+popdroidcam desktop
+
+# Or start streaming from CLI
 popdroidcam start
 
 # 4. Select "Android Cam" in your video app
@@ -55,7 +59,7 @@ cd PopDroidCamera
 
 The setup script:
 - Installs Bun and pnpm for TypeScript runtime
-- Installs Node.js dependencies (OpenTUI, qrcode)
+- Installs Node.js dependencies (Electron, React, qrcode)
 - Builds scrcpy 2.x from source (required for camera support)
 - Sets up v4l2loopback kernel module
 - Adds `popdroidcam` to your PATH
@@ -64,11 +68,30 @@ After setup, restart your terminal or run `source ~/.bashrc`.
 
 ## Usage
 
+### Desktop App (Recommended)
+
+Launch the desktop GUI for the best experience:
+
+```bash
+popdroidcam desktop
+```
+
+Features:
+- **Live camera preview** - See your camera feed in real-time
+- **Device detection** - Automatically finds connected phones
+- **Camera selection** - Choose between front/back and different lenses
+- **Resolution & FPS** - Pick from supported options
+- **WiFi pairing** - Connect to phones wirelessly
+- **System tray** - Quick access to start/stop camera
+
 ### CLI Commands
 
 ```bash
-# Launch interactive TUI
+# Launch interactive TUI (terminal)
 popdroidcam
+
+# Launch desktop GUI app
+popdroidcam desktop
 
 # Start camera in background (default: 1080p 30fps back camera)
 popdroidcam start
@@ -169,6 +192,9 @@ popdroidcam disconnect
 ### Examples
 
 ```bash
+# Launch desktop app
+popdroidcam desktop
+
 # Quick start (1080p, 30fps, back camera)
 popdroidcam start
 
@@ -205,7 +231,7 @@ popdroidcam start --camera-id 0    # Main back camera
 popdroidcam start --camera-id 2    # Wide angle (if available)
 ```
 
-In the TUI, enter the camera ID in the "Camera ID" field after clicking "Detect Cameras".
+In the desktop app or TUI, select the camera from the dropdown after detection.
 
 > **Note**: `--camera` (back/front) is simpler but uses the default lens. Use `--camera-id` for specific lens control.
 
@@ -224,7 +250,7 @@ popdroidcam start --device 10BF54084E002ZB
 popdroidcam start --device 192.168.1.100:5555
 ```
 
-In the TUI, use the device dropdown at the top of the Camera tab to select which phone to use.
+In the desktop app or TUI, use the device dropdown to select which phone to use.
 
 ## Using in Apps
 
@@ -234,6 +260,44 @@ After starting the stream, select **"Android Cam"** as your camera in:
 - **Zoom / Google Meet / Teams**
 - **OBS Studio** - Video Capture Device
 - Any app that uses webcam
+
+## Desktop App
+
+The desktop app provides a modern GUI built with Electron:
+
+```bash
+# Launch desktop app
+popdroidcam desktop
+
+# Or run directly with bun
+bun run desktop:dev
+```
+
+### Building Desktop Releases
+
+Create distributable packages for Linux:
+
+```bash
+# Build AppImage (portable, runs anywhere)
+bun run dist:appimage
+
+# Build .deb package (for Debian/Ubuntu)
+bun run dist:deb
+
+# Build both
+bun run dist:linux
+```
+
+Output files are created in the `release/` directory.
+
+### Desktop App Prerequisites
+
+For development:
+- Bun (installed by setup.sh)
+- Node.js dependencies (installed by setup.sh)
+
+For building releases:
+- `electron-builder` (installed as dev dependency)
 
 ## TUI (Terminal User Interface)
 
@@ -251,7 +315,10 @@ Run `popdroidcam` without arguments to launch the interactive interface:
 | File | Description |
 |------|-------------|
 | `popdroidcam` | Main CLI command (bash) |
-| `src/App.tsx` | Terminal UI (OpenTUI React) |
+| `src/desktop/main.ts` | Desktop app main process (Electron) |
+| `src/desktop/preload.ts` | Electron preload script for IPC |
+| `src/desktop/renderer/` | Desktop app UI (HTML/CSS/JS) |
+| `src/App.tsx` | Terminal UI (Ink React) |
 | `src/utils.ts` | Utility functions for device/camera management |
 | `src/qr-pair.ts` | QR code pairing with mDNS discovery |
 | `setup.sh` | Install dependencies, build scrcpy 2.x from source |
@@ -318,11 +385,23 @@ If a custom resolution fails (e.g., 4080x3060), it's likely a **hardware encoder
 
 Check `~/.local/state/popdroidcam/scrcpy.log` for error details if streaming fails.
 
+### Desktop app won't start
+
+1. Ensure the app is built:
+   ```bash
+   bun run desktop:build
+   ```
+
+2. Check for Electron errors:
+   ```bash
+   bun run desktop:dev
+   ```
+
 ## How It Works
 
 1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
 2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`)
-3. **popdroidcam** manages the stream and provides easy CLI/TUI controls
+3. **popdroidcam** manages the stream and provides easy CLI/TUI/Desktop controls
 
 > **Note**: Ubuntu/Pop!_OS ships scrcpy 1.x which lacks camera support. The setup script builds scrcpy 2.x from source.
 

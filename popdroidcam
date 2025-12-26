@@ -382,6 +382,21 @@ cmd_ui() {
     bun run src/gui/server.ts
 }
 
+cmd_desktop() {
+    ensure_v4l2loopback
+    cd "$SCRIPT_DIR"
+    
+    # Check if dist exists, if not build first
+    if [ ! -f "dist/desktop/main.js" ]; then
+        echo -e "${CYAN}Building desktop app...${NC}"
+        bun run desktop:build
+    fi
+    
+    # Launch electron
+    echo -e "${GREEN}Launching PopDroidCam Desktop...${NC}"
+    npx electron dist/desktop/main.js &
+}
+
 cmd_help() {
     echo "PopDroidCam - Use Android phone as webcam"
     echo ""
@@ -389,6 +404,7 @@ cmd_help() {
     echo ""
     echo "Commands:"
     echo "  (none)      Launch interactive TUI"
+    echo "  desktop     Launch desktop GUI app (Electron)"
     echo "  ui          Launch web-based GUI (opens in browser)"
     echo "  start       Start camera stream in background"
     echo "  stop        Stop camera stream"
@@ -423,6 +439,7 @@ cmd_help() {
     echo "    popdroidcam connect <ip> <port>"
     echo ""
     echo "Examples:"
+    echo "  popdroidcam desktop                    # Launch desktop app"
     echo "  popdroidcam start"
     echo "  popdroidcam start --res 4k --fps 30"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
@@ -455,6 +472,9 @@ case "${1:-}" in
         ;;
     ui)
         cmd_ui
+        ;;
+    desktop)
+        cmd_desktop
         ;;
     connect)
         shift

@@ -1,20 +1,28 @@
 {
-  "name": "popdroidcam-tui",
+  "name": "popdroidcam",
   "version": "1.0.0",
   "description": "Turn your Android phone into a high-quality webcam for Linux",
   "type": "module",
-  "main": "src/index.tsx",
+  "main": "dist/desktop/main.js",
   "scripts": {
     "tui": "bun run src/index.tsx",
     "qr": "bun run src/qr-pair.ts",
-    "typecheck": "tsc --noEmit"
+    "gui": "bun run src/gui/server.ts",
+    "typecheck": "tsc --noEmit",
+    "desktop:build": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && cp -r src/desktop/renderer dist/desktop/",
+    "desktop:dev": "bun run desktop:build && NODE_ENV=development electron dist/desktop/main.js",
+    "desktop": "electron dist/desktop/main.js",
+    "dist:linux": "bun run desktop:build && electron-builder --linux",
+    "dist:deb": "bun run desktop:build && electron-builder --linux deb",
+    "dist:appimage": "bun run desktop:build && electron-builder --linux AppImage"
   },
   "keywords": [
     "webcam",
     "android",
     "linux",
     "scrcpy",
-    "v4l2loopback"
+    "v4l2loopback",
+    "desktop"
   ],
   "author": "",
   "license": "MIT",
@@ -30,6 +38,37 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.7",
     "bun-types": "^1.3.5",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "com.popdroidcam.app",
+    "productName": "PopDroidCam",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*"
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Utility",
+      "icon": "assets/icon.png",
+      "maintainer": "PopDroidCam",
+      "synopsis": "Use your Android phone as a webcam",
+      "description": "Turn your Android phone into a high-quality webcam for Linux. No app required on phone - works over USB or WiFi."
+    }
   }
 }

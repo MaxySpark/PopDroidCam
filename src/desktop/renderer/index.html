@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:;">
+  <title>PopDroidCam</title>
+  <style>
+    :root {
+      --bg-primary: #09090b;
+      --bg-secondary: #18181b;
+      --bg-tertiary: #27272a;
+      --accent: #22c55e;
+      --accent-dim: rgba(34, 197, 94, 0.15);
+      --danger: #ef4444;
+      --text: #fafafa;
+      --text-dim: #a1a1aa;
+      --text-muted: #52525b;
+      --border: #3f3f46;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+    }
+    .app { display: flex; height: 100vh; }
+    .preview-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      position: relative;
+    }
+    .preview-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    .preview-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.85);
+      color: var(--text-muted);
+      gap: 16px;
+    }
+    .preview-overlay.hidden { display: none; }
+    .preview-icon { font-size: 64px; opacity: 0.4; }
+    .preview-text { font-size: 14px; text-align: center; max-width: 280px; line-height: 1.6; }
+    .preview-btn {
+      margin-top: 8px;
+      padding: 10px 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .preview-btn:hover { background: var(--border); }
+    .status-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .status-dot.live { background: var(--danger); animation: blink 1s infinite; }
+    .status-dot.ready { background: var(--accent); }
+    @keyframes blink { 50% { opacity: 0.5; } }
+    .sidebar {
+      width: 360px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo { font-size: 24px; }
+    .title { font-size: 16px; font-weight: 600; }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1;
+      padding: 14px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab:hover { color: var(--text-dim); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .panel-container { flex: 1; overflow-y: auto; }
+    .panel { display: none; padding: 20px; }
+    .panel.active { display: block; }
+    .field { margin-bottom: 16px; }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .field-row { display: flex; gap: 8px; }
+    select, input {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+    }
+    select:focus, input:focus { outline: none; border-color: var(--accent); }
+    input::placeholder { color: var(--text-muted); }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-icon { padding: 10px; min-width: 40px; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-primary:disabled { background: var(--bg-tertiary); color: var(--text-muted); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-ghost { background: var(--bg-tertiary); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--border); }
+    .actions { display: flex; gap: 10px; padding-top: 8px; }
+    .actions .btn { flex: 1; padding: 14px; }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 16px;
+      display: none;
+    }
+    .message.success { display: block; background: var(--accent-dim); color: var(--accent); }
+    .message.error { display: block; background: rgba(239,68,68,0.15); color: var(--danger); }
+    .row { display: flex; gap: 12px; }
+    .row > .field { flex: 1; margin-bottom: 12px; }
+    .loader {
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    .config-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="preview-section">
+      <video id="previewVideo" class="preview-video" autoplay playsinline muted></video>
+      <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-icon">📹</div>
+        <div class="preview-text">Camera preview will appear here when streaming</div>
+        <button class="preview-btn" id="enablePreviewBtn" onclick="requestCameraAccess()">Enable Preview</button>
+        <button class="preview-btn" id="refreshPreviewBtn" onclick="retryPreview()" style="margin-top:8px;">🔄 Refresh Preview</button>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Checking...</span>
+        <span id="statusConfig" class="config-info"></span>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">🎥</span>
+        <span class="title">PopDroidCam</span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="camera">Camera</button>
+        <button class="tab" data-tab="connect">Connect</button>
+      </div>
+
+      <div class="panel-container">
+        <div class="panel active" id="camera-panel">
+          <div class="field">
+            <label class="field-label">Device</label>
+            <div class="field-row">
+              <select id="deviceSelect"><option value="">Select device...</option></select>
+              <button class="btn btn-ghost btn-icon" onclick="refreshDevices()" title="Refresh">🔄</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Camera</label>
+            <div class="field-row">
+              <select id="cameraSelect"><option value="">Detect first...</option></select>
+              <button class="btn btn-ghost" onclick="detectCameras()">Detect</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label">Resolution</label>
+              <select id="resolutionSelect"><option value="">-</option></select>
+            </div>
+            <div class="field">
+              <label class="field-label">FPS</label>
+              <select id="fpsSelect"><option value="">-</option></select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="startBtn" onclick="startStream()">▶ Start</button>
+            <button class="btn btn-danger hidden" id="stopBtn" onclick="stopStream()">⏹ Stop</button>
+          </div>
+
+          <div class="message" id="cameraMessage"></div>
+        </div>
+
+        <div class="panel" id="connect-panel">
+          <div class="section-title">🔗 Pair Device</div>
+          <div class="row">
+            <div class="field">
+              <label class="field-label">IP</label>
+              <input type="text" id="pairIp" placeholder="192.168.1.100">
+            </div>
+            <div class="field">
+              <label class="field-label">Port</label>
+              <input type="text" id="pairPort" placeholder="37123">
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Pairing Code</label>
+            <input type="text" id="pairCode" placeholder="123456">
+          </div>
+          <button class="btn btn-primary" onclick="pairDevice()">Pair</button>
+
+          <div class="divider"></div>
+
+          <div class="section-title">📶 Connect</div>
+          <div class="row">
+            <div class="field">
+              <label class="field-label">IP</label>
+              <input type="text" id="connectIp" placeholder="192.168.1.100">
+            </div>
+            <div class="field">
+              <label class="field-label">Port</label>
+              <input type="text" id="connectPort" placeholder="5555">
+            </div>
+          </div>
+          <div class="field-row" style="gap: 10px;">
+            <button class="btn btn-primary" onclick="connectDevice()">Connect</button>
+            <button class="btn btn-ghost" onclick="disconnectDevices()">Disconnect All</button>
+          </div>
+
+          <div class="message" id="connectMessage"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // Use Electron IPC API exposed via preload script
+    const api = window.electronAPI;
+    let cameras = {};
+    let currentStatus = { running: false };
+    let previewStream = null;
+    let cameraPermission = false;
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-panel').classList.add('active');
+      });
+    });
+
+    function showMessage(id, text, isError = false) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'message ' + (isError ? 'error' : 'success');
+      setTimeout(() => el.className = 'message', 4000);
+    }
+
+    async function requestCameraAccess() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(t => t.stop());
+        cameraPermission = true;
+        document.getElementById('enablePreviewBtn').textContent = 'Permission Granted ✓';
+        document.getElementById('enablePreviewBtn').disabled = true;
+        if (currentStatus.running) startPreview();
+      } catch (e) {
+        alert('Camera permission denied. Preview will not work.');
+      }
+    }
+
+    function retryPreview() {
+      previewRetryCount = 0;
+      if (cameraPermission) {
+        startPreview();
+      } else {
+        requestCameraAccess();
+      }
+    }
+
+    let previewRetryTimer = null;
+    let previewRetryCount = 0;
+    const MAX_PREVIEW_RETRIES = 15;
+
+    async function startPreview() {
+      if (!cameraPermission) return;
+      if (previewRetryTimer) { clearTimeout(previewRetryTimer); previewRetryTimer = null; }
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cam = devices.find(d => 
+          d.kind === 'videoinput' && d.label && 
+          (d.label.toLowerCase().includes('android') || 
+           d.label.toLowerCase().includes('v4l2') ||
+           d.label.toLowerCase().includes('virtual'))
+        );
+        if (cam) {
+          previewStream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: cam.deviceId } }
+          });
+          document.getElementById('previewVideo').srcObject = previewStream;
+          document.getElementById('previewOverlay').classList.add('hidden');
+          previewRetryCount = 0;
+        } else if (currentStatus.running && previewRetryCount < MAX_PREVIEW_RETRIES) {
+          previewRetryCount++;
+          previewRetryTimer = setTimeout(startPreview, 1000);
+        }
+      } catch (e) {
+        if (currentStatus.running && previewRetryCount < MAX_PREVIEW_RETRIES) {
+          previewRetryCount++;
+          previewRetryTimer = setTimeout(startPreview, 1000);
+        }
+      }
+    }
+
+    function stopPreview() {
+      if (previewRetryTimer) { clearTimeout(previewRetryTimer); previewRetryTimer = null; }
+      previewRetryCount = 0;
+      if (previewStream) {
+        previewStream.getTracks().forEach(t => t.stop());
+        previewStream = null;
+      }
+      document.getElementById('previewVideo').srcObject = null;
+      document.getElementById('previewOverlay').classList.remove('hidden');
+    }
+
+    async function refreshStatus() {
+      try {
+        const status = await api.getStatus();
+        const wasRunning = currentStatus.running;
+        currentStatus = status;
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+        const cfg = document.getElementById('statusConfig');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        if (status.running) {
+          dot.className = 'status-dot live';
+          text.textContent = 'LIVE';
+          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps`;
+          startBtn.classList.add('hidden');
+          stopBtn.classList.remove('hidden');
+          if (!wasRunning) setTimeout(startPreview, 500);
+        } else {
+          dot.className = 'status-dot ready';
+          text.textContent = 'Ready';
+          cfg.textContent = '';
+          startBtn.classList.remove('hidden');
+          stopBtn.classList.add('hidden');
+          if (wasRunning) stopPreview();
+        }
+      } catch (e) {
+        console.error('Error refreshing status:', e);
+      }
+    }
+
+    async function refreshDevices() {
+      const sel = document.getElementById('deviceSelect');
+      sel.innerHTML = '<option value="">Loading...</option>';
+      try {
+        const devices = await api.getDevices();
+        sel.innerHTML = '<option value="">Select device...</option>';
+        if (!devices.length) {
+          sel.innerHTML = '<option value="">No devices</option>';
+          return;
+        }
+        devices.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.serial;
+          opt.textContent = `${d.type === 'WiFi' ? '📶' : '🔌'} ${d.serial}`;
+          sel.appendChild(opt);
+        });
+        if (devices.length === 1) sel.value = devices[0].serial;
+      } catch (e) {
+        sel.innerHTML = '<option value="">Error</option>';
+        console.error('Error refreshing devices:', e);
+      }
+    }
+
+    async function detectCameras() {
+      const serial = document.getElementById('deviceSelect').value || undefined;
+      const camSel = document.getElementById('cameraSelect');
+      const resSel = document.getElementById('resolutionSelect');
+      const fpsSel = document.getElementById('fpsSelect');
+      camSel.innerHTML = '<option value="">Detecting...</option>';
+      resSel.innerHTML = '<option value="">...</option>';
+      fpsSel.innerHTML = '<option value="">...</option>';
+      try {
+        cameras = await api.getCameras(serial);
+        const ids = Object.keys(cameras);
+        camSel.innerHTML = '<option value="">Select...</option>';
+        if (!ids.length) {
+          camSel.innerHTML = '<option value="">No cameras</option>';
+          return;
+        }
+        ids.forEach(id => {
+          const c = cameras[id];
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = `${c.facing === 'back' ? '📷' : '🤳'} ${id} (${c.facing})`;
+          camSel.appendChild(opt);
+        });
+        camSel.onchange = updateCameraOpts;
+        camSel.value = ids[0];
+        updateCameraOpts();
+      } catch (e) {
+        camSel.innerHTML = '<option value="">Error</option>';
+        console.error('Error detecting cameras:', e);
+      }
+    }
+
+    function updateCameraOpts() {
+      const id = document.getElementById('cameraSelect').value;
+      const resSel = document.getElementById('resolutionSelect');
+      const fpsSel = document.getElementById('fpsSelect');
+      if (!id || !cameras[id]) return;
+      const cam = cameras[id];
+      const pref = ['1920x1080', '1280x720', '3840x2160'];
+      resSel.innerHTML = '';
+      cam.resolutions.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r + (pref.includes(r) ? ' ★' : '');
+        resSel.appendChild(opt);
+      });
+      resSel.value = cam.resolutions.find(r => r === '1920x1080') || cam.resolutions[0];
+      fpsSel.innerHTML = '';
+      cam.fps.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f;
+        opt.textContent = f + ' fps';
+        fpsSel.appendChild(opt);
+      });
+      fpsSel.value = cam.fps.find(f => f === '30') || cam.fps[cam.fps.length - 1];
+    }
+
+    async function startStream() {
+      const serial = document.getElementById('deviceSelect').value || undefined;
+      const cameraId = document.getElementById('cameraSelect').value;
+      const resolution = document.getElementById('resolutionSelect').value;
+      const fps = document.getElementById('fpsSelect').value;
+      if (!cameraId || !resolution || !fps) {
+        showMessage('cameraMessage', 'Select camera, resolution & FPS', true);
+        return;
+      }
+      const btn = document.getElementById('startBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loader"></span>';
+      try {
+        const res = await api.startStream({ cameraId, resolution, fps, serial });
+        if (res.success) {
+          showMessage('cameraMessage', 'Stream started');
+          refreshStatus();
+        } else {
+          showMessage('cameraMessage', res.error || 'Failed', true);
+        }
+      } catch (e) {
+        showMessage('cameraMessage', 'Error', true);
+        console.error('Error starting stream:', e);
+      }
+      btn.disabled = false;
+      btn.innerHTML = '▶ Start';
+    }
+
+    async function stopStream() {
+      const btn = document.getElementById('stopBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loader"></span>';
+      try {
+        await api.stopStream();
+        showMessage('cameraMessage', 'Stopped');
+        refreshStatus();
+      } catch (e) {
+        showMessage('cameraMessage', 'Error', true);
+        console.error('Error stopping stream:', e);
+      }
+      btn.disabled = false;
+      btn.innerHTML = '⏹ Stop';
+    }
+
+    async function pairDevice() {
+      const ip = document.getElementById('pairIp').value;
+      const port = document.getElementById('pairPort').value;
+      const code = document.getElementById('pairCode').value;
+      if (!ip || !port || !code) {
+        showMessage('connectMessage', 'Fill all fields', true);
+        return;
+      }
+      try {
+        const success = await api.adbPair(ip, port, code);
+        if (success) {
+          showMessage('connectMessage', 'Paired! Now connect.');
+          document.getElementById('connectIp').value = ip;
+        } else {
+          showMessage('connectMessage', 'Pairing failed', true);
+        }
+      } catch (e) {
+        showMessage('connectMessage', 'Error', true);
+        console.error('Error pairing:', e);
+      }
+    }
+
+    async function connectDevice() {
+      const ip = document.getElementById('connectIp').value;
+      const port = document.getElementById('connectPort').value || '5555';
+      if (!ip) {
+        showMessage('connectMessage', 'Enter IP', true);
+        return;
+      }
+      try {
+        const success = await api.adbConnect(ip, port);
+        if (success) {
+          showMessage('connectMessage', 'Connected');
+          refreshDevices();
+        } else {
+          showMessage('connectMessage', 'Failed', true);
+        }
+      } catch (e) {
+        showMessage('connectMessage', 'Error', true);
+        console.error('Error connecting:', e);
+      }
+    }
+
+    async function disconnectDevices() {
+      try {
+        await api.adbDisconnect();
+        showMessage('connectMessage', 'Disconnected');
+        refreshDevices();
+      } catch (e) {
+        showMessage('connectMessage', 'Error', true);
+        console.error('Error disconnecting:', e);
+      }
+    }
+
+    // Initialize
+    refreshStatus();
+    refreshDevices();
+    setInterval(refreshStatus, 2000);
+  </script>
+</body>
+</html>
