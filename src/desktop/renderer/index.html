@@ -267,6 +267,18 @@
               <label class="field-label">FPS</label>
               <select id="fpsSelect"><option value="">-</option></select>
             </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label">Quality</label>
+              <select id="qualitySelect">
+                <option value="low">Low (4 Mbps)</option>
+                <option value="medium">Medium (8 Mbps)</option>
+                <option value="high" selected>High (16 Mbps)</option>
+                <option value="ultra">Ultra (32 Mbps)</option>
+              </select>
+            </div>
             <div class="field">
               <label class="field-label">Rotation</label>
               <select id="rotationSelect">
@@ -433,8 +445,9 @@
         if (status.running) {
           dot.className = 'status-dot live';
           text.textContent = 'LIVE';
-          const rotationText = status.config.rotation && status.config.rotation !== '0' ? ` (${status.config.rotation}°)` : '';
-          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${rotationText}`;
+          const rotationText = status.config.rotation && status.config.rotation !== '0' ? ` ${status.config.rotation}°` : '';
+          const qualityText = status.config.quality ? ` ${status.config.quality}` : '';
+          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}`;
           startBtn.classList.add('hidden');
           stopBtn.classList.remove('hidden');
           if (!wasRunning) setTimeout(startPreview, 500);
@@ -560,6 +573,7 @@
       const resolution = document.getElementById('resolutionSelect').value;
       const fps = document.getElementById('fpsSelect').value;
       const rotation = document.getElementById('rotationSelect').value;
+      const quality = document.getElementById('qualitySelect').value;
       if (!cameraId || !resolution || !fps) {
         showMessage('cameraMessage', 'Select camera, resolution & FPS', true);
         return;
@@ -568,7 +582,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loader"></span>';
       try {
-        const res = await api.startStream({ cameraId, resolution, fps, serial, rotation });
+        const res = await api.startStream({ cameraId, resolution, fps, serial, rotation, quality });
         if (res.success) {
           showMessage('cameraMessage', 'Stream started');
           refreshStatus();

@@ -13,6 +13,16 @@ export const PREFERRED_RESOLUTIONS = ["1920x1080", "1280x720", "1920x1440", "256
 export type Rotation = "0" | "90" | "180" | "270";
 export const ROTATION_OPTIONS: Rotation[] = ["0", "90", "180", "270"];
 
+// Video quality presets (bitrate in Mbps)
+export type VideoQuality = "low" | "medium" | "high" | "ultra";
+export const VIDEO_QUALITY_OPTIONS: VideoQuality[] = ["low", "medium", "high", "ultra"];
+export const VIDEO_QUALITY_BITRATES: Record<VideoQuality, string> = {
+  low: "4M",      // 4 Mbps - saves bandwidth, lower quality
+  medium: "8M",   // 8 Mbps - scrcpy default, balanced
+  high: "16M",    // 16 Mbps - good quality
+  ultra: "32M",   // 32 Mbps - best quality, highest bandwidth
+};
+
 export interface Device {
   serial: string;
   state: string;
@@ -179,6 +189,7 @@ export interface StartStreamOptions {
   fps: string;
   serial?: string;
   rotation?: Rotation;
+  quality?: VideoQuality;
 }
 
 export function startStream(options: StartStreamOptions): { success: boolean; pid?: number; error?: string } {
@@ -187,11 +198,15 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
   }
 
   const v4l2Device = findV4l2LoopbackDevice();
+  const quality = options.quality || "high";
+  const bitrate = VIDEO_QUALITY_BITRATES[quality];
+  
   const args = [
     "--video-source=camera",
     `--camera-id=${options.cameraId}`,
     `--camera-size=${options.resolution}`,
     `--camera-fps=${options.fps}`,
+    `--video-bit-rate=${bitrate}`,
     `--v4l2-sink=${v4l2Device}`,
     "--no-window",
     "--no-audio",
@@ -221,7 +236,7 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
 
     if (pid) {
       writeFileSync(PID_FILE, String(pid));
-      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\n`);
+      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\n`);
       return { success: true, pid };
     }
     return { success: false, error: "Failed to start process" };
