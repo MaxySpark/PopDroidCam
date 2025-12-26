@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 declare global {
   interface Window {
     electronAPI: {
-      getDevices: () => Promise<Array<{ serial: string; state: string; type: "WiFi" | "USB" }>>;
+      getDevices: () => Promise<Array<{ serial: string; state: string; type: "WiFi" | "USB"; model?: string }>>;
       getCameras: (serial?: string) => Promise<Record<string, { facing: string; fps: string[]; resolutions: string[] }>>;
       getStatus: () => Promise<{ running: boolean; pid: number | null; config: Record<string, string> }>;
       startStream: (options: {

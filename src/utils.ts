@@ -17,6 +17,7 @@ export interface Device {
   serial: string;
   state: string;
   type: "WiFi" | "USB";
+  model?: string;
 }
 
 export interface Camera {
@@ -93,10 +94,13 @@ export function getDevices(): Device[] {
         if (parts.length >= 2) {
           const serial = parts[0];
           const state = parts[1];
+          const modelMatch = line.match(/model:(\S+)/);
+          const model = modelMatch ? modelMatch[1].replace(/_/g, " ") : undefined;
           devices.push({
             serial,
             state,
             type: serial.includes(":") ? "WiFi" : "USB",
+            model,
           });
         }
       }

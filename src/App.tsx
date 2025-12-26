@@ -386,7 +386,8 @@ function App() {
   const getDeviceDisplay = () => {
     const dev = devices.find(d => d.serial === selectedDevice);
     if (!dev) return selectedDevice || "--";
-    return `${dev.serial.slice(0, 20)} (${dev.type})`;
+    const name = dev.model || dev.serial.slice(0, 20);
+    return `${name} (${dev.type})`;
   };
 
   const getCameraDisplay = () => {
@@ -402,7 +403,7 @@ function App() {
   };
 
   const statusDevice = devices.length > 0 
-    ? `${devices[0].type}: ${devices[0].serial.slice(0, 18)}`
+    ? `${devices[0].type}: ${devices[0].model || devices[0].serial.slice(0, 18)}`
     : "No device";
   const statusStream = streamRunning 
     ? `Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps`

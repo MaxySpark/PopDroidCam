@@ -292,7 +292,15 @@ cmd_devices() {
     echo "Android devices:"
     adb devices -l 2>/dev/null | tail -n +2 | while read line; do
         if [ -n "$line" ]; then
-            echo "  $line"
+            local serial=$(echo "$line" | awk '{print $1}')
+            local state=$(echo "$line" | awk '{print $2}')
+            local model=$(echo "$line" | grep -oP 'model:\K\S+' | tr '_' ' ')
+            
+            if [ -n "$model" ]; then
+                echo -e "  ${GREEN}$model${NC} ($serial) - $state"
+            else
+                echo "  $serial - $state"
+            fi
         fi
     done
 

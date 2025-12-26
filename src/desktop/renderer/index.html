@@ -463,7 +463,8 @@
         devices.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.serial;
-          opt.textContent = `${d.type === 'WiFi' ? '📶' : '🔌'} ${d.serial}`;
+          const name = d.model || d.serial;
+          opt.textContent = `${d.type === 'WiFi' ? '📶' : '🔌'} ${name}`;
           sel.appendChild(opt);
         });
         if (devices.length === 1) sel.value = devices[0].serial;
