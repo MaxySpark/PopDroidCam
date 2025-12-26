@@ -196,6 +196,7 @@
     .row { display: flex; gap: 12px; }
     .row > .field { flex: 1; margin-bottom: 12px; }
     .loader {
+      display: inline-block;
       width: 14px; height: 14px;
       border: 2px solid currentColor;
       border-top-color: transparent;
@@ -245,7 +246,7 @@
             <label class="field-label">Device</label>
             <div class="field-row">
               <select id="deviceSelect"><option value="">Select device...</option></select>
-              <button class="btn btn-ghost btn-icon" onclick="refreshDevices()" title="Refresh">🔄</button>
+              <button class="btn btn-ghost btn-icon" id="refreshDevicesBtn" onclick="refreshDevices()" title="Refresh">🔄</button>
             </div>
           </div>
 
@@ -253,7 +254,7 @@
             <label class="field-label">Camera</label>
             <div class="field-row">
               <select id="cameraSelect"><option value="">Detect first...</option></select>
-              <button class="btn btn-ghost" onclick="detectCameras()">Detect</button>
+              <button class="btn btn-ghost" id="detectCamerasBtn" onclick="detectCameras()">Detect</button>
             </div>
           </div>
 
@@ -301,7 +302,7 @@
             <label class="field-label">Pairing Code</label>
             <input type="text" id="pairCode" placeholder="123456">
           </div>
-          <button class="btn btn-primary" onclick="pairDevice()">Pair</button>
+          <button class="btn btn-primary" id="pairBtn" onclick="pairDevice()">Pair</button>
 
           <div class="divider"></div>
 
@@ -317,8 +318,8 @@
             </div>
           </div>
           <div class="field-row" style="gap: 10px;">
-            <button class="btn btn-primary" onclick="connectDevice()">Connect</button>
-            <button class="btn btn-ghost" onclick="disconnectDevices()">Disconnect All</button>
+            <button class="btn btn-primary" id="connectBtn" onclick="connectDevice()">Connect</button>
+            <button class="btn btn-ghost" id="disconnectBtn" onclick="disconnectDevices()">Disconnect All</button>
           </div>
 
           <div class="message" id="connectMessage"></div>
@@ -452,7 +453,12 @@
 
     async function refreshDevices() {
       const sel = document.getElementById('deviceSelect');
+      const btn = document.getElementById('refreshDevicesBtn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="loader"></span>';
+      btn.disabled = true;
       sel.innerHTML = '<option value="">Loading...</option>';
+      sel.disabled = true;
       try {
         const devices = await api.getDevices();
         sel.innerHTML = '<option value="">Select device...</option>';
@@ -471,6 +477,10 @@
       } catch (e) {
         sel.innerHTML = '<option value="">Error</option>';
         console.error('Error refreshing devices:', e);
+      } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        sel.disabled = false;
       }
     }
 
@@ -479,9 +489,16 @@
       const camSel = document.getElementById('cameraSelect');
       const resSel = document.getElementById('resolutionSelect');
       const fpsSel = document.getElementById('fpsSelect');
+      const btn = document.getElementById('detectCamerasBtn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="loader"></span>';
+      btn.disabled = true;
       camSel.innerHTML = '<option value="">Detecting...</option>';
+      camSel.disabled = true;
       resSel.innerHTML = '<option value="">...</option>';
+      resSel.disabled = true;
       fpsSel.innerHTML = '<option value="">...</option>';
+      fpsSel.disabled = true;
       try {
         cameras = await api.getCameras(serial);
         const ids = Object.keys(cameras);
@@ -503,6 +520,12 @@
       } catch (e) {
         camSel.innerHTML = '<option value="">Error</option>';
         console.error('Error detecting cameras:', e);
+      } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        camSel.disabled = false;
+        resSel.disabled = false;
+        fpsSel.disabled = false;
       }
     }
 
@@ -584,6 +607,10 @@
         showMessage('connectMessage', 'Fill all fields', true);
         return;
       }
+      const btn = document.getElementById('pairBtn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="loader"></span> Pairing...';
+      btn.disabled = true;
       try {
         const success = await api.adbPair(ip, port, code);
         if (success) {
@@ -595,6 +622,9 @@
       } catch (e) {
         showMessage('connectMessage', 'Error', true);
         console.error('Error pairing:', e);
+      } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
       }
     }
 
@@ -605,6 +635,10 @@
         showMessage('connectMessage', 'Enter IP', true);
         return;
       }
+      const btn = document.getElementById('connectBtn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="loader"></span> Connecting...';
+      btn.disabled = true;
       try {
         const success = await api.adbConnect(ip, port);
         if (success) {
@@ -616,10 +650,17 @@
       } catch (e) {
         showMessage('connectMessage', 'Error', true);
         console.error('Error connecting:', e);
+      } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
       }
     }
 
     async function disconnectDevices() {
+      const btn = document.getElementById('disconnectBtn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="loader"></span>';
+      btn.disabled = true;
       try {
         await api.adbDisconnect();
         showMessage('connectMessage', 'Disconnected');
@@ -627,6 +668,9 @@
       } catch (e) {
         showMessage('connectMessage', 'Error', true);
         console.error('Error disconnecting:', e);
+      } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
       }
     }
 
