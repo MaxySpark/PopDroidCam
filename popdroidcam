@@ -225,7 +225,8 @@ cmd_list() {
         exit 1
     fi
 
-    local output=$(scrcpy --video-source=camera --list-cameras 2>&1)
+    # Get detailed camera sizes
+    local output=$(scrcpy --video-source=camera --list-camera-sizes 2>&1)
     
     local device_info=$(echo "$output" | grep -E "^\[server\] INFO: Device:" | sed 's/\[server\] INFO: Device: //')
     if [ -n "$device_info" ]; then
@@ -234,21 +235,39 @@ cmd_list() {
     fi
 
     echo "Available cameras:"
-    echo "$output" | grep -E "^\s+--camera-id=" | while read line; do
-        local id=$(echo "$line" | grep -oP 'camera-id=\K[0-9]+')
-        local facing=$(echo "$line" | grep -oP '\(\K[^,]+')
-        local resolution=$(echo "$line" | grep -oP ', \K[0-9]+x[0-9]+')
-        local fps_list=$(echo "$line" | grep -oP 'fps=\[\K[^\]]+')
-        
-        echo ""
-        echo -e "  ${CYAN}Camera $id${NC} ($facing)"
-        echo "    Max Resolution: $resolution"
-        echo "    Supported FPS:  $fps_list"
-        echo "    Usage: popdroidcam start --camera $facing --res $resolution"
+    
+    local current_cam=""
+    echo "$output" | while IFS= read -r line; do
+        # Camera header line
+        if [[ "$line" =~ --camera-id=([0-9]+).*\(([^,]+),.*fps=\[([^\]]+)\] ]]; then
+            local id="${BASH_REMATCH[1]}"
+            local facing="${BASH_REMATCH[2]}"
+            local fps_list="${BASH_REMATCH[3]}"
+            echo ""
+            echo -e "  ${CYAN}Camera $id${NC} ($facing)"
+            echo "    FPS: $fps_list"
+            echo "    Resolutions:"
+            current_cam="$id"
+        # Resolution line
+        elif [[ "$line" =~ ^[[:space:]]+-[[:space:]]+([0-9]+x[0-9]+) ]]; then
+            local res="${BASH_REMATCH[1]}"
+            # Highlight recommended resolutions
+            if [[ "$res" == "1920x1080" || "$res" == "1280x720" || "$res" == "3840x2160" ]]; then
+                echo -e "      ${GREEN}$res${NC} (recommended)"
+            else
+                echo "      $res"
+            fi
+        fi
     done
     
     echo ""
-    echo -e "${YELLOW}Tip:${NC} Use --res with custom resolution like --res 4080x3060"
+    echo -e "${YELLOW}Recommended resolutions:${NC}"
+    echo "  1920x1080 (1080p) - Best compatibility"
+    echo "  1280x720 (720p)   - Lower bandwidth"
+    echo "  3840x2160 (4K)    - If your phone supports it"
+    echo ""
+    echo -e "${YELLOW}Note:${NC} Native camera resolution (e.g. 4080x3060) may fail due to"
+    echo "      hardware encoder limitations. Use recommended resolutions for best results."
 }
 
 cmd_devices() {
