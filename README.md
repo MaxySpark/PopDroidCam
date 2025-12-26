@@ -2,17 +2,20 @@
 
 **Turn your Android phone into a high-quality webcam for Linux.**
 
-No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4K, and custom resolutions.
+No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4K, custom resolutions, and camera rotation.
 
 ## Features
 
 - **High quality video** - 1080p, 4K, up to 30fps (device dependent)
 - **Zero phone setup** - No app needed, just enable USB/Wireless debugging
 - **USB or WiFi** - Connect via cable or wireless debugging
-- **QR code pairing** - Easy wireless setup
+- **QR code pairing** - Easy wireless setup with automatic discovery
 - **Multi-camera support** - Choose between back, front, wide, ultrawide lenses
+- **Camera rotation** - Rotate output 0°, 90°, 180°, or 270°
+- **Device model display** - Shows phone model name instead of cryptic serial numbers
 - **Works everywhere** - Zoom, Meet, Teams, OBS, Chrome, Firefox
 - **Desktop App** - Native Electron GUI with live preview
+- **Web GUI** - Browser-based interface
 - **CLI + TUI** - Command-line and interactive terminal interface
 - **Background mode** - No window, no dock icon
 
@@ -20,8 +23,8 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/YourUsername/PopDroidCamera.git
-cd PopDroidCamera
+git clone https://github.com/YourUsername/PopDroidCam.git
+cd PopDroidCam
 ./setup.sh
 
 # 2. Connect phone via USB with debugging enabled
@@ -35,42 +38,130 @@ popdroidcam start
 # 4. Select "Android Cam" in your video app
 ```
 
-## Requirements
+## Prerequisites
 
-- Linux (tested on Pop!_OS 22.04, Ubuntu 22.04+)
-- Android phone with Developer Options enabled
-- USB cable (easiest) or WiFi on same network
+### System Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **OS** | Linux (tested on Pop!_OS 22.04, Ubuntu 22.04+, Debian 12+) |
+| **Kernel** | v4l2loopback support (most modern kernels) |
+| **Architecture** | x86_64 (amd64) |
+
+### Phone Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Android Version** | Android 12+ recommended (for wireless debugging QR pairing) |
+| **Developer Options** | Must be enabled |
+| **USB Debugging** | Required for USB connection |
+| **Wireless Debugging** | Required for WiFi connection (Android 11+) |
+
+### Dependencies (installed by setup.sh)
+
+| Package | Purpose |
+|---------|---------|
+| **adb** | Android Debug Bridge for phone communication |
+| **scrcpy 2.x+** | Camera capture from Android (built from source) |
+| **v4l2loopback** | Virtual webcam kernel module |
+| **ffmpeg** | Video processing |
+| **Bun** | TypeScript runtime |
+| **pnpm** | Package manager |
+| **Electron** | Desktop app framework |
+
+> **Note**: Ubuntu/Pop!_OS ship scrcpy 1.x which lacks camera support. The setup script automatically builds scrcpy 2.x from source.
 
 ## Tested Devices
 
-| Device | Back Camera | Front Camera |
-|--------|-------------|--------------|
-| Vivo T4x | 4080x3060 @ 30fps | 3264x2448 @ 30fps |
+| Device | Model | Back Camera | Front Camera |
+|--------|-------|-------------|--------------|
+| Samsung Galaxy F62 | SM-E625F | 1920x1080 @ 30fps | 1920x1080 @ 30fps |
+| Vivo T4x | - | 4080x3060 @ 30fps | 3264x2448 @ 30fps |
 
 > Run `popdroidcam list` to see your phone's capabilities.
 
 ## Installation
 
+### Automatic Setup (Recommended)
+
 ```bash
-git clone https://github.com/YourUsername/PopDroidCamera.git
-cd PopDroidCamera
+git clone https://github.com/YourUsername/PopDroidCam.git
+cd PopDroidCam
 ./setup.sh
 ```
 
 The setup script:
-- Installs Bun and pnpm for TypeScript runtime
-- Installs Node.js dependencies (Electron, React, qrcode)
-- Builds scrcpy 2.x from source (required for camera support)
-- Sets up v4l2loopback kernel module
-- Adds `popdroidcam` to your PATH
+1. Installs system dependencies (adb, ffmpeg, build tools)
+2. Installs v4l2loopback kernel module
+3. Installs Bun and pnpm for TypeScript runtime
+4. Installs Node.js dependencies (Electron, React, Ink)
+5. Builds scrcpy 2.x from source (required for camera support)
+6. Builds the desktop app
+7. Adds `popdroidcam` to your PATH (`~/.local/bin`)
+8. Loads the v4l2loopback module
 
 After setup, restart your terminal or run `source ~/.bashrc`.
 
+### Manual Prerequisites
+
+If you prefer manual installation or setup.sh fails:
+
+```bash
+# Install system packages
+sudo apt install -y \
+    adb ffmpeg v4l2loopback-dkms v4l2loopback-utils \
+    libsdl2-2.0-0 libsdl2-dev \
+    libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
+    libswresample-dev libusb-1.0-0-dev \
+    gcc git pkg-config meson ninja-build curl unzip
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install pnpm
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+
+# Load v4l2loopback
+sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
+```
+
+Then build scrcpy 2.x from source (see [scrcpy build instructions](https://github.com/Genymobile/scrcpy/blob/master/doc/linux.md#build)).
+
+## Phone Setup
+
+### Enable Developer Options
+
+1. Go to **Settings → About Phone**
+2. Tap **Build Number** 7 times
+3. You'll see "You are now a developer!"
+
+### Enable USB Debugging (for USB connection)
+
+1. Go to **Settings → Developer Options**
+2. Enable **USB debugging**
+3. Connect phone via USB cable
+4. Accept the "Allow USB debugging?" prompt on phone
+
+### Enable Wireless Debugging (for WiFi connection)
+
+1. Go to **Settings → Developer Options**
+2. Enable **Wireless debugging**
+3. Ensure phone and PC are on the same WiFi network
+
 ## Usage
 
-### Desktop App (Recommended)
+### Interface Options
 
-Launch the desktop GUI for the best experience:
+PopDroidCam offers four ways to use it:
+
+| Interface | Command | Description |
+|-----------|---------|-------------|
+| **Desktop App** | `popdroidcam desktop` | Electron GUI with live preview |
+| **Web GUI** | `popdroidcam ui` | Browser-based interface |
+| **TUI** | `popdroidcam` | Interactive terminal interface |
+| **CLI** | `popdroidcam start` | Background streaming |
+
+### Desktop App (Recommended)
 
 ```bash
 popdroidcam desktop
@@ -78,20 +169,44 @@ popdroidcam desktop
 
 Features:
 - **Live camera preview** - See your camera feed in real-time
-- **Device detection** - Automatically finds connected phones
+- **Device detection** - Automatically finds connected phones with model names
 - **Camera selection** - Choose between front/back and different lenses
 - **Resolution & FPS** - Pick from supported options
+- **Rotation control** - Rotate camera output 0°, 90°, 180°, 270°
 - **WiFi pairing** - Connect to phones wirelessly
-- **System tray** - Quick access to start/stop camera
+
+### Web GUI
+
+```bash
+popdroidcam ui
+```
+
+Opens a browser-based interface at `http://localhost:3847` with similar features to the desktop app.
+
+### TUI (Terminal User Interface)
+
+```bash
+popdroidcam
+```
+
+Interactive terminal interface with:
+- **Camera tab**: Select device, camera/lens, resolution, FPS, rotation
+- **Connect tab**: Pair and connect to phones over WiFi
+- Device dropdown shows phone model names
+- Keyboard shortcuts: `Tab` to switch tabs, `Enter` to select, `r` to refresh, `q` to quit
+- Rotation toggle with `Ctrl+T`
 
 ### CLI Commands
 
 ```bash
-# Launch interactive TUI (terminal)
+# Launch interactive TUI
 popdroidcam
 
 # Launch desktop GUI app
 popdroidcam desktop
+
+# Launch web-based GUI
+popdroidcam ui
 
 # Start camera in background (default: 1080p 30fps back camera)
 popdroidcam start
@@ -99,6 +214,7 @@ popdroidcam start
 # Start with custom settings
 popdroidcam start --res 4k --fps 30
 popdroidcam start --res 1080p --fps 30 --camera front
+popdroidcam start --rotation 90
 
 # Stop camera
 popdroidcam stop
@@ -106,10 +222,10 @@ popdroidcam stop
 # Check status
 popdroidcam status
 
-# List cameras on phone
+# List cameras on phone with resolutions
 popdroidcam list
 
-# List connected devices
+# List connected devices (shows model names)
 popdroidcam devices
 
 # Show help
@@ -117,8 +233,6 @@ popdroidcam help
 ```
 
 ### Wireless Connection
-
-Connect to your phone over WiFi instead of USB cable.
 
 #### Option 1: QR Code Pairing (Easiest)
 
@@ -130,10 +244,7 @@ Then on your phone:
 1. Go to **Settings → Developer Options → Wireless debugging**
 2. Tap **"Pair device with QR code"**
 3. Scan the QR code shown in terminal
-4. Once paired, connect with the port shown on phone's Wireless debugging screen:
-   ```bash
-   popdroidcam connect <ip> <port>
-   ```
+4. Device auto-connects after pairing!
 
 #### Option 2: Manual Pairing
 
@@ -169,23 +280,24 @@ popdroidcam disconnect
 
 > **Note**: Pairing port and connection port are different! After pairing once, you only need `connect` in the future.
 
-### Options for `start`
+### Start Options
 
-| Option | Values | Default |
-|--------|--------|---------|
-| `--res` | `720p`, `1080p`, `4k`, or custom (e.g., `4080x3060`) | `1080p` |
-| `--fps` | `10`, `15`, `20`, `24`, `30` (device dependent) | `30` |
-| `--camera` | `front`, `back` | `back` |
-| `--camera-id` | Camera ID for specific lens (see `popdroidcam list`) | - |
-| `--device` | Device serial (e.g., `10BF54084E002ZB` or `192.168.1.100:5555`) | Auto-detect |
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `--res` | `720p`, `1080p`, `4k`, or `WxH` | `1080p` | Video resolution |
+| `--fps` | `10`, `15`, `20`, `24`, `30` | `30` | Frame rate |
+| `--camera` | `front`, `back` | `back` | Camera facing direction |
+| `--camera-id` | `0`, `1`, `2`, etc. | - | Specific camera lens ID |
+| `--rotation` | `0`, `90`, `180`, `270` | `0` | Rotate camera output |
+| `--device` | Serial or IP:port | Auto-detect | Select specific phone |
 
 **Resolution presets:**
-| Preset | Resolves to |
-|--------|-------------|
+| Preset | Resolution |
+|--------|------------|
 | `720p` | 1280x720 |
 | `1080p` | 1920x1080 |
 | `4k` | 3840x2160 |
-| Custom | Pass exact `WxH` (e.g., `4080x3060`) |
+| Custom | Any `WxH` (e.g., `4080x3060`) |
 
 > **Tip**: Use `popdroidcam list` to see your phone's native camera resolutions and supported FPS values.
 
@@ -207,6 +319,12 @@ popdroidcam start --camera front
 # Specific lens by ID (see 'popdroidcam list')
 popdroidcam start --camera-id 2
 
+# Rotated 90 degrees (portrait to landscape)
+popdroidcam start --rotation 90
+
+# Combine options
+popdroidcam start --res 1080p --fps 30 --camera-id 0 --rotation 90
+
 # Check status / stop
 popdroidcam status
 popdroidcam stop
@@ -214,7 +332,7 @@ popdroidcam stop
 
 ### Camera Lens Selection
 
-Phones with multiple cameras (wide, ultrawide, telephoto) expose each as a separate camera ID. Use `--camera-id` to select a specific lens:
+Phones with multiple cameras (wide, ultrawide, telephoto) expose each as a separate camera ID:
 
 ```bash
 # List available cameras to see IDs
@@ -231,17 +349,39 @@ popdroidcam start --camera-id 0    # Main back camera
 popdroidcam start --camera-id 2    # Wide angle (if available)
 ```
 
-In the desktop app or TUI, select the camera from the dropdown after detection.
+> **Note**: `--camera` (back/front) uses the default lens. Use `--camera-id` for specific lens control.
 
-> **Note**: `--camera` (back/front) is simpler but uses the default lens. Use `--camera-id` for specific lens control.
+### Camera Rotation
+
+Rotate the camera output to match your physical phone orientation:
+
+```bash
+# No rotation (default)
+popdroidcam start --rotation 0
+
+# Rotate 90° clockwise
+popdroidcam start --rotation 90
+
+# Rotate 180° (upside down)
+popdroidcam start --rotation 180
+
+# Rotate 270° (90° counter-clockwise)
+popdroidcam start --rotation 270
+```
+
+In the Desktop/Web/TUI interfaces, use the rotation dropdown or `Ctrl+T` shortcut.
 
 ### Multiple Devices
 
 When multiple phones are connected, use `--device` to select which one:
 
 ```bash
-# List connected devices
+# List connected devices (shows model names)
 popdroidcam devices
+
+# Example output:
+#   SM E625F (192.168.1.94:40679) - device
+#   Pixel 7 (10BF54084E002ZB) - device
 
 # Start with specific device (USB)
 popdroidcam start --device 10BF54084E002ZB
@@ -250,80 +390,47 @@ popdroidcam start --device 10BF54084E002ZB
 popdroidcam start --device 192.168.1.100:5555
 ```
 
-In the desktop app or TUI, use the device dropdown to select which phone to use.
-
 ## Using in Apps
 
 After starting the stream, select **"Android Cam"** as your camera in:
 
 - **Browser** (Chrome, Firefox) - video calls
 - **Zoom / Google Meet / Teams**
-- **OBS Studio** - Video Capture Device
+- **OBS Studio** - Video Capture Device → Android Cam
 - Any app that uses webcam
 
-## Desktop App
-
-The desktop app provides a modern GUI built with Electron:
-
-```bash
-# Launch desktop app
-popdroidcam desktop
-
-# Or run directly with bun
-bun run desktop:dev
-```
-
-### Building Desktop Releases
+## Building Desktop Releases
 
 Create distributable packages for Linux:
 
 ```bash
 # Build AppImage (portable, runs anywhere)
-bun run dist:appimage
+pnpm run dist:appimage
 
 # Build .deb package (for Debian/Ubuntu)
-bun run dist:deb
+pnpm run dist:deb
 
 # Build both
-bun run dist:linux
+pnpm run dist:linux
 ```
 
 Output files are created in the `release/` directory.
 
-### Desktop App Prerequisites
+## Project Structure
 
-For development:
-- Bun (installed by setup.sh)
-- Node.js dependencies (installed by setup.sh)
-
-For building releases:
-- `electron-builder` (installed as dev dependency)
-
-## TUI (Terminal User Interface)
-
-Run `popdroidcam` without arguments to launch the interactive interface:
-
-- **Camera tab**: Select device, camera/lens, resolution, FPS, and start/stop stream
-- **Connect tab**: Pair and connect to phones over WiFi (use `popdroidcam qr` for QR pairing)
-- Device dropdown auto-populates with connected phones (USB and WiFi)
-- Camera ID field for specific lens selection (click "Detect Cameras" first)
-- Real-time status display (shows if stream started via CLI too)
-- Press `r` to refresh status, `q` to quit
-
-## Files
-
-| File | Description |
-|------|-------------|
+| File/Directory | Description |
+|----------------|-------------|
 | `popdroidcam` | Main CLI command (bash) |
 | `src/desktop/main.ts` | Desktop app main process (Electron) |
 | `src/desktop/preload.ts` | Electron preload script for IPC |
 | `src/desktop/renderer/` | Desktop app UI (HTML/CSS/JS) |
+| `src/gui/server.ts` | Web GUI server (Bun) |
+| `src/gui/index.html` | Web GUI interface |
 | `src/App.tsx` | Terminal UI (Ink React) |
-| `src/utils.ts` | Utility functions for device/camera management |
+| `src/utils.ts` | Shared utilities (device/camera management) |
 | `src/qr-pair.ts` | QR code pairing with mDNS discovery |
-| `setup.sh` | Install dependencies, build scrcpy 2.x from source |
+| `setup.sh` | Install dependencies and build scrcpy |
 | `uninstall.sh` | Remove installation and cleanup |
-| `test_stream.sh` | Verify streaming works |
 
 ## State Files
 
@@ -332,7 +439,7 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 | File | Purpose |
 |------|---------|
 | `pid` | Process ID of running stream |
-| `config` | Current stream settings |
+| `config` | Current stream settings (resolution, fps, rotation, etc.) |
 | `scrcpy.log` | scrcpy output for debugging |
 
 ## Troubleshooting
@@ -354,56 +461,103 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
    sudo modprobe v4l2loopback card_label="Android Cam" exclusive_caps=1
    ```
 
+4. Restart your video app after starting the stream
+
 ### Phone not detected
 
 **USB:**
-1. Enable USB debugging on phone (Settings → Developer Options → USB debugging)
+1. Enable USB debugging (Settings → Developer Options → USB debugging)
 2. Check connection:
    ```bash
    popdroidcam devices
    ```
 3. If "unauthorized", accept the prompt on your phone
+4. Try a different USB cable (some cables are charge-only)
 
 **WiFi:**
 1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)
-2. Pair first time: `popdroidcam pair <ip> <port> <code>`
+2. Pair first time: `popdroidcam qr` or `popdroidcam pair <ip> <port> <code>`
 3. Connect: `popdroidcam connect <ip> <port>`
-4. Ensure phone and PC are on same network
+4. Ensure phone and PC are on same network (same subnet)
+5. Check if firewall is blocking adb ports (5555, 5037)
 
 ### scrcpy version too old
 
-Run `./setup.sh` to build scrcpy 2.x+ from source (required for camera support).
+The camera feature requires scrcpy 2.0+. Run setup.sh to build from source:
+
+```bash
+./setup.sh
+```
+
+Or check your version:
+```bash
+scrcpy --version
+# Must be 2.0 or higher
+```
 
 ### Custom resolution not working
 
-If a custom resolution fails (e.g., 4080x3060), it's likely a **hardware encoder limitation** on your phone. The camera sensor can capture at that resolution, but the phone's MediaCodec can't encode it for streaming.
+If a custom resolution fails (e.g., 4080x3060), it's likely a **hardware encoder limitation** on your phone.
 
-**Solution**: Use standard resolutions that encoders support well:
+**Solution**: Use standard resolutions:
 - `1920x1080` (recommended - works on all devices)
 - `1280x720` (lower bandwidth)
 - `3840x2160` (4K - if your phone supports it)
 
-Check `~/.local/state/popdroidcam/scrcpy.log` for error details if streaming fails.
+Check logs for details:
+```bash
+cat ~/.local/state/popdroidcam/scrcpy.log
+```
 
 ### Desktop app won't start
 
 1. Ensure the app is built:
    ```bash
-   bun run desktop:build
+   pnpm run desktop:build
    ```
 
 2. Check for Electron errors:
    ```bash
-   bun run desktop:dev
+   pnpm run desktop:dev
    ```
+
+3. Ensure Electron is properly installed:
+   ```bash
+   node node_modules/electron/install.js
+   ```
+
+### Stream quality issues
+
+- **Laggy/choppy**: Lower resolution or FPS (`--res 720p --fps 15`)
+- **Blurry**: Use higher resolution (`--res 1080p` or `--res 4k`)
+- **WiFi latency**: Connect via USB for best performance
 
 ## How It Works
 
-1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
-2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`)
-3. **popdroidcam** manages the stream and provides easy CLI/TUI/Desktop controls
+```
+┌─────────────┐     USB/WiFi      ┌─────────────┐
+│   Android   │ ←───────────────→ │    Linux    │
+│   Phone     │    adb + scrcpy   │     PC      │
+│  (camera)   │                   │             │
+└─────────────┘                   └──────┬──────┘
+                                         │
+                                         ▼
+                              ┌─────────────────────┐
+                              │    v4l2loopback     │
+                              │  (virtual webcam)   │
+                              │   /dev/videoN       │
+                              └──────────┬──────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    ▼                    ▼                    ▼
+              ┌──────────┐        ┌──────────┐        ┌──────────┐
+              │   Zoom   │        │  Chrome  │        │   OBS    │
+              └──────────┘        └──────────┘        └──────────┘
+```
 
-> **Note**: Ubuntu/Pop!_OS ships scrcpy 1.x which lacks camera support. The setup script builds scrcpy 2.x from source.
+1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
+2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`) named "Android Cam"
+3. **popdroidcam** manages the stream and provides CLI/TUI/Desktop/Web interfaces
 
 ## Uninstall
 
@@ -416,6 +570,16 @@ This removes:
 - State files from `~/.local/state/popdroidcam/`
 - Node modules
 - Build artifacts (keeps source code)
+
+To completely remove, also delete the project directory and uninstall scrcpy if desired.
+
+## Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
 ## License
 
