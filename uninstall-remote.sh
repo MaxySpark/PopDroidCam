@@ -16,24 +16,24 @@ if [ ! -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}PopDroidCam is not installed at $INSTALL_DIR${NC}"
     echo ""
     
+    FOUND_SOMETHING=false
+    
     if [ -L "$HOME/.local/bin/popdroidcam" ]; then
-        echo "Found orphan symlink at ~/.local/bin/popdroidcam"
-        read -p "Remove it? [y/N] " -n 1 -r < /dev/tty
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -f "$HOME/.local/bin/popdroidcam"
-            echo -e "${GREEN}✓${NC} Removed symlink"
-        fi
+        echo "Removing orphan symlink at ~/.local/bin/popdroidcam"
+        rm -f "$HOME/.local/bin/popdroidcam"
+        echo -e "${GREEN}✓${NC} Removed symlink"
+        FOUND_SOMETHING=true
     fi
     
     if [ -d "$HOME/.local/state/popdroidcam" ]; then
-        echo "Found state directory at ~/.local/state/popdroidcam"
-        read -p "Remove it? [y/N] " -n 1 -r < /dev/tty
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -rf "$HOME/.local/state/popdroidcam"
-            echo -e "${GREEN}✓${NC} Removed state directory"
-        fi
+        echo "Removing state directory at ~/.local/state/popdroidcam"
+        rm -rf "$HOME/.local/state/popdroidcam"
+        echo -e "${GREEN}✓${NC} Removed state directory"
+        FOUND_SOMETHING=true
+    fi
+    
+    if [ "$FOUND_SOMETHING" = false ]; then
+        echo "Nothing to clean up."
     fi
     
     exit 0
@@ -41,12 +41,16 @@ fi
 
 echo "This will remove PopDroidCam from: $INSTALL_DIR"
 echo ""
-read -p "Continue with uninstall? [y/N] " -n 1 -r < /dev/tty
-echo ""
 
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Uninstall cancelled."
-    exit 0
+if [ -t 0 ]; then
+    printf "Continue with uninstall? [y/N] "
+    read -r REPLY
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Uninstall cancelled."
+        exit 0
+    fi
+else
+    echo "Running in non-interactive mode, proceeding with uninstall..."
 fi
 
 echo ""

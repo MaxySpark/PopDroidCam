@@ -50,7 +50,7 @@ export function findV4l2LoopbackDevice(): string {
       const namePath = join(videoDir, entry, "name");
       if (existsSync(namePath)) {
         const name = readFileSync(namePath, "utf-8");
-        if (name.includes("PopDroidCam") || name.includes("v4l2loopback")) {
+        if (name.includes("PopDroidCam") || name.includes("Android") || name.includes("v4l2loopback")) {
           return `/dev/${entry}`;
         }
       }

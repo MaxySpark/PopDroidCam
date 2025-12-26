@@ -24,7 +24,7 @@ find_v4l2_device() {
     for name_file in /sys/devices/virtual/video4linux/video*/name; do
         if [ -f "$name_file" ]; then
             name=$(cat "$name_file" 2>/dev/null)
-            if [[ "$name" == *"PopDroidCam"* ]] || [[ "$name" == *"v4l2loopback"* ]]; then
+            if [[ "$name" == *"PopDroidCam"* ]] || [[ "$name" == *"Android"* ]] || [[ "$name" == *"v4l2loopback"* ]]; then
                 device=$(basename "$(dirname "$name_file")")
                 echo "/dev/$device"
                 return 0
