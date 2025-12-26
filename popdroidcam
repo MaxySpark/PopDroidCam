@@ -64,6 +64,7 @@ cmd_start() {
     local camera="back"
     local camera_id=""
     local device=""
+    local rotation="0"
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -92,6 +93,13 @@ cmd_start() {
                 device="$2"
                 shift 2
                 ;;
+            --rotation|--rotate)
+                case $2 in
+                    0|90|180|270) rotation="$2" ;;
+                    *) echo -e "${RED}Invalid rotation. Use 0, 90, 180, or 270.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
             *)
                 shift
                 ;;
@@ -116,6 +124,9 @@ cmd_start() {
         echo "  Camera: $camera"
     fi
     echo "  Device: $v4l2_device"
+    if [ "$rotation" != "0" ]; then
+        echo "  Rotation: ${rotation}°"
+    fi
     if [ -n "$device" ]; then
         echo "  Phone: $device"
     fi
@@ -129,6 +140,9 @@ cmd_start() {
     if [ -n "$device" ]; then
         scrcpy_cmd="$scrcpy_cmd --serial=$device"
     fi
+    if [ "$rotation" != "0" ]; then
+        scrcpy_cmd="$scrcpy_cmd --capture-orientation=$rotation"
+    fi
 
     nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
 
@@ -141,6 +155,7 @@ cmd_start() {
         echo "fps=$fps" >> "$CONFIG_FILE"
         echo "camera=$camera" >> "$CONFIG_FILE"
         echo "device=$v4l2_device" >> "$CONFIG_FILE"
+        echo "rotation=$rotation" >> "$CONFIG_FILE"
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
@@ -422,6 +437,7 @@ cmd_help() {
     echo "  --fps         Frame rate: 10, 15, 20, 24, 30 (default)"
     echo "  --camera      Camera facing: back (default), front"
     echo "  --camera-id   Camera ID for specific lens (use 'list' to see IDs)"
+    echo "  --rotation    Rotate camera: 0 (default), 90, 180, 270"
     echo "  --device      Select device by serial (for multiple phones)"
     echo ""
     echo "Camera selection:"

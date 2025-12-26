@@ -10,6 +10,9 @@ const CONFIG_FILE = join(STATE_DIR, "config");
 // Hardware encoders work best with standard resolutions
 export const PREFERRED_RESOLUTIONS = ["1920x1080", "1280x720", "1920x1440", "2560x1440", "3840x2160"];
 
+export type Rotation = "0" | "90" | "180" | "270";
+export const ROTATION_OPTIONS: Rotation[] = ["0", "90", "180", "270"];
+
 export interface Device {
   serial: string;
   state: string;
@@ -171,6 +174,7 @@ export interface StartStreamOptions {
   resolution: string;
   fps: string;
   serial?: string;
+  rotation?: Rotation;
 }
 
 export function startStream(options: StartStreamOptions): { success: boolean; pid?: number; error?: string } {
@@ -193,6 +197,10 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
     args.push(`--serial=${options.serial}`);
   }
 
+  if (options.rotation && options.rotation !== "0") {
+    args.push(`--capture-orientation=${options.rotation}`);
+  }
+
   try {
     mkdirSync(STATE_DIR, { recursive: true });
     const logPath = join(STATE_DIR, "scrcpy.log");
@@ -209,7 +217,7 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
 
     if (pid) {
       writeFileSync(PID_FILE, String(pid));
-      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\n`);
+      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\n`);
       return { success: true, pid };
     }
     return { success: false, error: "Failed to start process" };

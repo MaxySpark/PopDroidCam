@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     resolution: string;
     fps: string;
     serial?: string;
+    rotation?: string;
   }) => ipcRenderer.invoke("start-stream", options),
   stopStream: () => ipcRenderer.invoke("stop-stream"),
   
@@ -35,6 +36,7 @@ declare global {
         resolution: string;
         fps: string;
         serial?: string;
+        rotation?: string;
       }) => Promise<{ success: boolean; pid?: number; error?: string }>;
       stopStream: () => Promise<boolean>;
       adbConnect: (ip: string, port: string) => Promise<boolean>;
