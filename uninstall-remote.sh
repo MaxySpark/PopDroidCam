@@ -18,7 +18,7 @@ if [ ! -d "$INSTALL_DIR" ]; then
     
     if [ -L "$HOME/.local/bin/popdroidcam" ]; then
         echo "Found orphan symlink at ~/.local/bin/popdroidcam"
-        read -p "Remove it? [y/N] " -n 1 -r
+        read -p "Remove it? [y/N] " -n 1 -r < /dev/tty
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -f "$HOME/.local/bin/popdroidcam"
@@ -28,7 +28,7 @@ if [ ! -d "$INSTALL_DIR" ]; then
     
     if [ -d "$HOME/.local/state/popdroidcam" ]; then
         echo "Found state directory at ~/.local/state/popdroidcam"
-        read -p "Remove it? [y/N] " -n 1 -r
+        read -p "Remove it? [y/N] " -n 1 -r < /dev/tty
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -rf "$HOME/.local/state/popdroidcam"
@@ -41,7 +41,7 @@ fi
 
 echo "This will remove PopDroidCam from: $INSTALL_DIR"
 echo ""
-read -p "Continue with uninstall? [y/N] " -n 1 -r
+read -p "Continue with uninstall? [y/N] " -n 1 -r < /dev/tty
 echo ""
 
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
