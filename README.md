@@ -54,8 +54,8 @@ cd PopDroidCamera
 ```
 
 The setup script:
-- Creates Python virtual environment
-- Installs dependencies (textual, qrcode, zeroconf)
+- Installs Bun and pnpm for TypeScript runtime
+- Installs Node.js dependencies (OpenTUI, qrcode)
 - Builds scrcpy 2.x from source (required for camera support)
 - Sets up v4l2loopback kernel module
 - Adds `popdroidcam` to your PATH
@@ -250,9 +250,10 @@ Run `popdroidcam` without arguments to launch the interactive interface:
 
 | File | Description |
 |------|-------------|
-| `popdroidcam` | Main CLI command |
-| `cam_tui.py` | Terminal UI (Textual-based) |
-| `qr_pair.py` | QR code pairing with mDNS discovery |
+| `popdroidcam` | Main CLI command (bash) |
+| `src/App.tsx` | Terminal UI (OpenTUI React) |
+| `src/utils.ts` | Utility functions for device/camera management |
+| `src/qr-pair.ts` | QR code pairing with mDNS discovery |
 | `setup.sh` | Install dependencies, build scrcpy 2.x from source |
 | `uninstall.sh` | Remove installation and cleanup |
 | `test_stream.sh` | Verify streaming works |
@@ -334,7 +335,7 @@ Check `~/.local/state/popdroidcam/scrcpy.log` for error details if streaming fai
 This removes:
 - Symlink from `~/.local/bin/popdroidcam`
 - State files from `~/.local/state/popdroidcam/`
-- Python virtual environment
+- Node modules
 - Build artifacts (keeps source code)
 
 ## License

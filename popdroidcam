@@ -373,10 +373,13 @@ cmd_disconnect() {
 
 cmd_qr() {
     cd "$SCRIPT_DIR"
-    if [ -d "venv" ]; then
-        source venv/bin/activate
-    fi
-    python3 qr_pair.py
+    bun run src/qr-pair.ts
+}
+
+cmd_ui() {
+    ensure_v4l2loopback
+    cd "$SCRIPT_DIR"
+    bun run src/gui/server.ts
 }
 
 cmd_help() {
@@ -386,6 +389,7 @@ cmd_help() {
     echo ""
     echo "Commands:"
     echo "  (none)      Launch interactive TUI"
+    echo "  ui          Launch web-based GUI (opens in browser)"
     echo "  start       Start camera stream in background"
     echo "  stop        Stop camera stream"
     echo "  status      Show current status"
@@ -449,6 +453,9 @@ case "${1:-}" in
     qr)
         cmd_qr
         ;;
+    ui)
+        cmd_ui
+        ;;
     connect)
         shift
         cmd_connect "$@"
@@ -466,10 +473,7 @@ case "${1:-}" in
     "")
         ensure_v4l2loopback
         cd "$SCRIPT_DIR"
-        if [ -d "venv" ]; then
-            source venv/bin/activate
-        fi
-        python3 cam_tui.py
+        bun run src/index.tsx
         ;;
     *)
         echo "Unknown command: $1"
