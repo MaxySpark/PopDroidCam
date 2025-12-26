@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { render, Box, Text, useInput, useApp } from "ink";
-import SelectInput from "ink-select-input";
+import { render, Box, Text, useInput, useApp, useStdout } from "ink";
 import TextInput from "ink-text-input";
 import {
   getDevices,
@@ -36,13 +35,51 @@ function getLogColor(type: LogEntry["type"]): string {
   }
 }
 
-interface SelectItem {
+interface InlineSelectorProps {
   label: string;
-  value: string;
+  items: string[];
+  selected: string;
+  focused: boolean;
+  shortcut: string;
+}
+
+function InlineSelector({ label, items, selected, focused, shortcut }: InlineSelectorProps) {
+  const currentIdx = items.indexOf(selected);
+  const hasPrev = currentIdx > 0;
+  const hasNext = currentIdx < items.length - 1;
+
+  return (
+    <Box 
+      borderStyle="round" 
+      borderColor={focused ? "cyan" : "gray"} 
+      paddingX={1}
+      marginBottom={1}
+    >
+      <Box width={16}>
+        <Text color="cyan" bold>{shortcut} {label}</Text>
+      </Box>
+      <Box flexGrow={1}>
+        {items.length > 0 ? (
+          <Box>
+            <Text color={focused && hasPrev ? "cyan" : "gray"}>{hasPrev ? "< " : "  "}</Text>
+            <Text color={focused ? "white" : "gray"} bold={focused}>{selected || "--"}</Text>
+            <Text color={focused && hasNext ? "cyan" : "gray"}>{hasNext ? " >" : "  "}</Text>
+            {focused && <Text color="gray" dimColor> ({currentIdx + 1}/{items.length})</Text>}
+          </Box>
+        ) : (
+          <Text color="gray">--</Text>
+        )}
+      </Box>
+    </Box>
+  );
 }
 
 function App() {
   const { exit } = useApp();
+  const { stdout } = useStdout();
+  const terminalHeight = stdout?.rows || 24;
+  const logHeight = Math.max(5, terminalHeight - 22);
+  const maxLogs = Math.max(3, logHeight - 2);
   const [tab, setTab] = useState<Tab>("camera");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +107,9 @@ function App() {
   const log = useCallback((message: string, type: LogEntry["type"] = "info") => {
     setLogs((currentLogs) => {
       const newId = Date.now() + Math.random();
-      return [...currentLogs.slice(-4), { id: newId, message, type }];
+      return [...currentLogs.slice(-(maxLogs - 1)), { id: newId, message, type }];
     });
-  }, []);
+  }, [maxLogs]);
 
   const refreshStatus = useCallback(() => {
     const pid = isRunning();
@@ -194,31 +231,53 @@ function App() {
     refreshDevices();
   }, [log, refreshDevices]);
 
-  const deviceItems: SelectItem[] = devices.map((d) => ({
-    label: `${d.serial.slice(0, 25)} (${d.type})`,
-    value: d.serial,
-  }));
-
-  const cameraItems: SelectItem[] = Object.entries(cameras).map(([id, cam]) => ({
-    label: `${id}: ${cam.facing}`,
-    value: id,
-  }));
-
+  const deviceSerials = devices.map((d) => d.serial);
+  const cameraIds = Object.keys(cameras);
+  
   const currentCamera = cameras[selectedCamera];
-  const resolutionItems: SelectItem[] = currentCamera
+  const resolutions: string[] = currentCamera
     ? [...PREFERRED_RESOLUTIONS.filter((r) => currentCamera.resolutions.includes(r)),
        ...currentCamera.resolutions.filter((r) => !PREFERRED_RESOLUTIONS.includes(r))]
-        .map((r) => ({ label: PREFERRED_RESOLUTIONS.includes(r) ? `${r} ★` : r, value: r }))
     : [];
-
-  const fpsItems: SelectItem[] = currentCamera
-    ? currentCamera.fps.map((f) => ({ label: `${f} fps`, value: f }))
-    : [];
+  const fpsOptions: string[] = currentCamera ? currentCamera.fps : [];
 
   const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "actions"];
   const connectFocusOrder: ConnectFocus[] = ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port", "actions"];
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
+
+  const cycleValue = (items: string[], current: string, direction: number): string => {
+    if (items.length === 0) return current;
+    const idx = items.indexOf(current);
+    const newIdx = Math.max(0, Math.min(items.length - 1, idx + direction));
+    return items[newIdx];
+  };
+
+  const handleDeviceChange = (serial: string) => {
+    setSelectedDevice(serial);
+    const cams = getCameraSizes(serial);
+    setCameras(cams);
+    const camIds = Object.keys(cams);
+    if (camIds.length > 0) {
+      setSelectedCamera(camIds[0]);
+      const cam = cams[camIds[0]];
+      const preferredRes = cam.resolutions.find((r) => PREFERRED_RESOLUTIONS.includes(r)) || cam.resolutions[0];
+      if (preferredRes) setSelectedResolution(preferredRes);
+      if (cam.fps.includes("30")) setSelectedFps("30");
+      else if (cam.fps.length > 0) setSelectedFps(cam.fps[0]);
+    }
+  };
+
+  const handleCameraChange = (camId: string) => {
+    setSelectedCamera(camId);
+    const camData = cameras[camId];
+    if (camData) {
+      const preferredRes = camData.resolutions.find((r) => PREFERRED_RESOLUTIONS.includes(r)) || camData.resolutions[0];
+      if (preferredRes) setSelectedResolution(preferredRes);
+      if (camData.fps.includes("30")) setSelectedFps("30");
+      else if (camData.fps.length > 0) setSelectedFps(camData.fps[0]);
+    }
+  };
 
   useInput((input, key) => {
     if (input === "q" && !isInputFocused) {
@@ -232,7 +291,7 @@ function App() {
 
     if (key.ctrl) {
       if (input === "d") { setTab("camera"); setCameraFocus("device"); return; }
-      if (input === "c") { setTab("camera"); setCameraFocus("camera"); return; }
+      if (input === "l") { setTab("camera"); setCameraFocus("camera"); return; }
       if (input === "e") { setTab("camera"); setCameraFocus("resolution"); return; }
       if (input === "f") { setTab("camera"); setCameraFocus("fps"); return; }
       if (input === "a") { setTab("camera"); setCameraFocus("actions"); return; }
@@ -264,15 +323,31 @@ function App() {
         } else if (key.downArrow && currentIdx < cameraFocusOrder.length - 1) {
           setCameraFocus(cameraFocusOrder[currentIdx + 1]);
         }
+        return;
       }
-      if (cameraFocus === "actions") {
-        if (key.leftArrow) setActionIndex((prev) => Math.max(0, prev - 1));
-        if (key.rightArrow) setActionIndex((prev) => Math.min(2, prev + 1));
-        if (key.return) {
-          if (actionIndex === 0) handleStart();
-          else if (actionIndex === 1) handleStop();
-          else refreshDevices();
+
+      if (key.leftArrow || key.rightArrow) {
+        const dir = key.leftArrow ? -1 : 1;
+        if (cameraFocus === "device") {
+          const newVal = cycleValue(deviceSerials, selectedDevice, dir);
+          if (newVal !== selectedDevice) handleDeviceChange(newVal);
+        } else if (cameraFocus === "camera") {
+          const newVal = cycleValue(cameraIds, selectedCamera, dir);
+          if (newVal !== selectedCamera) handleCameraChange(newVal);
+        } else if (cameraFocus === "resolution") {
+          setSelectedResolution(cycleValue(resolutions, selectedResolution, dir));
+        } else if (cameraFocus === "fps") {
+          setSelectedFps(cycleValue(fpsOptions, selectedFps, dir));
+        } else if (cameraFocus === "actions") {
+          setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }
+        return;
+      }
+
+      if (key.return && cameraFocus === "actions") {
+        if (actionIndex === 0) handleStart();
+        else if (actionIndex === 1) handleStop();
+        else refreshDevices();
       }
     }
 
@@ -301,30 +376,50 @@ function App() {
     }
   });
 
+  const getDeviceDisplay = () => {
+    const dev = devices.find(d => d.serial === selectedDevice);
+    if (!dev) return selectedDevice || "--";
+    return `${dev.serial.slice(0, 20)} (${dev.type})`;
+  };
+
+  const getCameraDisplay = () => {
+    const cam = cameras[selectedCamera];
+    if (!cam) return selectedCamera || "--";
+    return `${selectedCamera}: ${cam.facing}`;
+  };
+
+  const getResolutionDisplay = () => {
+    if (!selectedResolution) return "--";
+    const isRecommended = PREFERRED_RESOLUTIONS.includes(selectedResolution);
+    return isRecommended ? `${selectedResolution} ★` : selectedResolution;
+  };
+
   const statusDevice = devices.length > 0 
-    ? `● ${devices[0].type}: ${devices[0].serial.slice(0, 18)}`
-    : "● No device";
+    ? `${devices[0].type}: ${devices[0].serial.slice(0, 18)}`
+    : "No device";
   const statusStream = streamRunning 
-    ? `● Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps`
-    : "● Stopped";
+    ? `Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps`
+    : "Stopped";
 
   const shortcutHelp = tab === "camera" 
-    ? "^D:device ^C:cam ^E:res ^F:fps ^A:action | s:start x:stop r:refresh q:quit"
-    : "^P:pair ^O:conn ^A:action | Esc:exit input | r:refresh q:quit";
+    ? "^D:device ^L:cam ^E:res ^F:fps | s:start x:stop r:refresh q:quit"
+    : "^P:pair ^O:conn | Esc:exit input | r:refresh q:quit";
 
   return (
-    <Box flexDirection="column" paddingX={1} paddingY={1}>
+    <Box flexDirection="column" paddingX={1} paddingY={1} height={terminalHeight}>
       <Box marginBottom={1}>
         <Text color="cyan" bold>PopDroidCam</Text>
         <Text>  </Text>
-        {loading && <Text color="yellow">⟳ </Text>}
-        <Text color="gray">[1/2:tabs] </Text>
+        {loading && <Text color="yellow">...</Text>}
+        <Text color="gray">[1/2:tabs] [</Text>
+        <Text color="cyan">left/right</Text>
+        <Text color="gray">:change] </Text>
         <Text color="gray" dimColor>{shortcutHelp}</Text>
       </Box>
 
       <Box marginBottom={1} gap={4}>
-        <Text color={devices.length > 0 ? "green" : "red"}>{statusDevice}</Text>
-        <Text color={streamRunning ? "green" : "gray"}>{statusStream}</Text>
+        <Text color={devices.length > 0 ? "green" : "red"}>{devices.length > 0 ? "●" : "○"} {statusDevice}</Text>
+        <Text color={streamRunning ? "green" : "gray"}>{streamRunning ? "●" : "○"} {statusStream}</Text>
       </Box>
 
       <Box marginBottom={1}>
@@ -335,105 +430,66 @@ function App() {
 
       {tab === "camera" && (
         <Box flexDirection="column">
-          <Box flexDirection="column" borderStyle="round" borderColor={cameraFocus === "device" ? "cyan" : "gray"} paddingX={1} marginBottom={1}>
-            <Text color="cyan" bold>^D Device</Text>
-            {deviceItems.length > 0 ? (
-              <SelectInput
-                items={deviceItems}
-                isFocused={cameraFocus === "device"}
-                onSelect={(item) => {
-                  setSelectedDevice(item.value);
-                  const cams = getCameraSizes(item.value);
-                  setCameras(cams);
-                  const camIds = Object.keys(cams);
-                  if (camIds.length > 0) setSelectedCamera(camIds[0]);
-                  setCameraFocus("camera");
-                }}
-              />
-            ) : (
-              <Text color="gray">No devices connected</Text>
-            )}
-          </Box>
+          <InlineSelector
+            label="Device"
+            shortcut="^D"
+            items={deviceSerials}
+            selected={getDeviceDisplay()}
+            focused={cameraFocus === "device"}
+          />
 
-          <Box flexDirection="column" borderStyle="round" borderColor={cameraFocus === "camera" ? "cyan" : "gray"} paddingX={1} marginBottom={1}>
-            <Text color="cyan" bold>^C Camera</Text>
-            {cameraItems.length > 0 ? (
-              <SelectInput
-                items={cameraItems}
-                isFocused={cameraFocus === "camera"}
-                onSelect={(item) => {
-                  setSelectedCamera(item.value);
-                  const camData = cameras[item.value];
-                  if (camData) {
-                    const preferredRes = camData.resolutions.find((r) => PREFERRED_RESOLUTIONS.includes(r)) || camData.resolutions[0];
-                    if (preferredRes) setSelectedResolution(preferredRes);
-                  }
-                  setCameraFocus("resolution");
-                }}
-              />
-            ) : (
-              <Text color="gray">No cameras detected</Text>
-            )}
-          </Box>
+          <InlineSelector
+            label="Camera"
+            shortcut="^L"
+            items={cameraIds}
+            selected={getCameraDisplay()}
+            focused={cameraFocus === "camera"}
+          />
 
           <Box gap={2}>
-            <Box flexDirection="column" borderStyle="round" borderColor={cameraFocus === "resolution" ? "cyan" : "gray"} paddingX={1} flexGrow={1}>
-              <Text color="cyan" bold>^E Resolution</Text>
-              {resolutionItems.length > 0 ? (
-                <SelectInput
-                  items={resolutionItems}
-                  isFocused={cameraFocus === "resolution"}
-                  limit={5}
-                  onSelect={(item) => {
-                    setSelectedResolution(item.value);
-                    setCameraFocus("fps");
-                  }}
-                />
-              ) : (
-                <Text color="gray">--</Text>
-              )}
+            <Box flexGrow={1}>
+              <InlineSelector
+                label="Resolution"
+                shortcut="^E"
+                items={resolutions}
+                selected={getResolutionDisplay()}
+                focused={cameraFocus === "resolution"}
+              />
             </Box>
-
-            <Box flexDirection="column" borderStyle="round" borderColor={cameraFocus === "fps" ? "cyan" : "gray"} paddingX={1} width={20}>
-              <Text color="cyan" bold>^F FPS</Text>
-              {fpsItems.length > 0 ? (
-                <SelectInput
-                  items={fpsItems}
-                  isFocused={cameraFocus === "fps"}
-                  onSelect={(item) => {
-                    setSelectedFps(item.value);
-                    setCameraFocus("actions");
-                  }}
-                />
-              ) : (
-                <Text color="gray">--</Text>
-              )}
+            <Box width={24}>
+              <InlineSelector
+                label="FPS"
+                shortcut="^F"
+                items={fpsOptions}
+                selected={selectedFps}
+                focused={cameraFocus === "fps"}
+              />
             </Box>
           </Box>
 
           {currentCamera && (
-            <Box marginTop={1}>
-              <Text color="gray">{currentCamera.facing} camera • {currentCamera.resolutions.length} resolutions • fps: {currentCamera.fps.join(", ")}</Text>
+            <Box marginBottom={1}>
+              <Text color="gray">{currentCamera.facing} camera | {currentCamera.resolutions.length} resolutions | fps: {currentCamera.fps.join(", ")}</Text>
             </Box>
           )}
 
-          <Box marginTop={1} gap={1}>
+          <Box gap={1}>
             <Text 
               color={cameraFocus === "actions" && actionIndex === 0 ? "black" : "white"} 
               backgroundColor={cameraFocus === "actions" && actionIndex === 0 ? "green" : "gray"}
               bold
-            > s ▶ Start </Text>
+            > s Start </Text>
             <Text 
               color={cameraFocus === "actions" && actionIndex === 1 ? "black" : "white"} 
               backgroundColor={cameraFocus === "actions" && actionIndex === 1 ? "red" : "gray"}
               bold
-            > x ■ Stop </Text>
+            > x Stop </Text>
             <Text 
               color={cameraFocus === "actions" && actionIndex === 2 ? "black" : "white"} 
               backgroundColor={cameraFocus === "actions" && actionIndex === 2 ? "blue" : "gray"}
               bold
-            > r ↻ Refresh </Text>
-            {cameraFocus === "actions" && <Text color="gray"> ← → Enter</Text>}
+            > r Refresh </Text>
+            {cameraFocus === "actions" && <Text color="gray"> (left/right + Enter)</Text>}
           </Box>
         </Box>
       )}
@@ -506,7 +562,7 @@ function App() {
             </Box>
           </Box>
 
-          <Box marginTop={1} gap={1}>
+          <Box gap={1}>
             <Text 
               color={connectFocus === "actions" && actionIndex === 0 ? "black" : "white"} 
               backgroundColor={connectFocus === "actions" && actionIndex === 0 ? "yellow" : "gray"}
@@ -522,12 +578,12 @@ function App() {
               backgroundColor={connectFocus === "actions" && actionIndex === 2 ? "red" : "gray"}
               bold
             > Disconnect All </Text>
-            {connectFocus === "actions" && <Text color="gray"> ← → Enter</Text>}
+            {connectFocus === "actions" && <Text color="gray"> (left/right + Enter)</Text>}
           </Box>
         </Box>
       )}
 
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" marginTop={1} paddingX={1} height={7}>
+      <Box flexDirection="column" borderStyle="round" borderColor="gray" marginTop={1} paddingX={1} flexGrow={1} height={logHeight}>
         <Text color="gray" bold>Log</Text>
         {logs.map((entry) => (
           <Text key={entry.id} color={getLogColor(entry.type)}>{entry.message}</Text>

@@ -35,6 +35,9 @@ fi
 echo ">>> Installing Node.js dependencies..."
 pnpm install
 
+echo ">>> Building desktop app..."
+pnpm run desktop:build
+
 echo ">>> Setting up build directory..."
 mkdir -p build_scrcpy
 cd build_scrcpy
@@ -90,6 +93,7 @@ echo "=== Setup Complete! ==="
 echo ""
 echo "Usage:"
 echo "  popdroidcam          - Launch interactive TUI"
+echo "  popdroidcam desktop  - Launch desktop GUI app"
 echo "  popdroidcam start    - Start camera in background"
 echo "  popdroidcam stop     - Stop camera"
 echo "  popdroidcam status   - Check status"
