@@ -22,10 +22,8 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 ## Quick Start
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/YourUsername/PopDroidCam.git
-cd PopDroidCam
-./setup.sh
+# One-line install
+curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/install.sh | bash
 
 # 2. Connect phone via USB with debugging enabled
 
@@ -82,11 +80,23 @@ popdroidcam start
 
 ## Installation
 
-### Automatic Setup (Recommended)
+### One-Line Install (Recommended)
 
 ```bash
-git clone https://github.com/YourUsername/PopDroidCam.git
-cd PopDroidCam
+curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/install.sh | bash
+```
+
+This will:
+1. Clone the repository to `~/.local/popdroidcam`
+2. Run the full setup automatically
+
+### Manual Setup
+
+If you prefer to clone manually:
+
+```bash
+git clone https://github.com/MaxySpark/PopDroidCam.git ~/.local/popdroidcam
+cd ~/.local/popdroidcam
 ./setup.sh
 ```
 
@@ -525,6 +535,26 @@ cat ~/.local/state/popdroidcam/scrcpy.log
    ```bash
    node node_modules/electron/install.js
    ```
+
+### WSL2 Limitations
+
+WSL2 uses a custom Microsoft kernel that **does not include v4l2loopback**. This means:
+
+- **Virtual webcam will NOT work** - You cannot use your phone as a webcam in Windows apps (Zoom, Teams, etc.)
+- **Camera viewing works** - You can still view your phone's camera feed in a window using `scrcpy --video-source=camera`
+
+**Error you'll see:**
+```
+modprobe: FATAL: Module v4l2loopback not found in directory /lib/modules/5.15.167.4-microsoft-standard-WSL2
+```
+
+**Workarounds:**
+
+1. **Use native Linux** - Dual-boot or use a Linux VM with proper kernel module support
+2. **Screen share the scrcpy window** - Run camera in window mode and share that window in your video call
+3. **Build custom WSL2 kernel** - Advanced: Compile WSL2 kernel with v4l2loopback support ([guide](https://github.com/microsoft/WSL/issues/6348))
+
+For full virtual webcam functionality, a native Linux installation is recommended.
 
 ### Stream quality issues
 
