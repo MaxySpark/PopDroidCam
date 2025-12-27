@@ -89,6 +89,7 @@ cmd_start() {
     local quality="high"
     local bitrate="16M"
     local mirror="off"
+    local zoom="1x"
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -146,6 +147,13 @@ cmd_start() {
                 esac
                 shift 2
                 ;;
+            --zoom)
+                case $2 in
+                    1x|1.5x|2x|3x|4x) zoom="$2" ;;
+                    *) echo -e "${RED}Invalid zoom level. Use 1x, 1.5x, 2x, 3x, or 4x.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
             *)
                 shift
                 ;;
@@ -177,6 +185,9 @@ cmd_start() {
     if [ "$mirror" == "on" ]; then
         echo "  Mirror: on"
     fi
+    if [ "$zoom" != "1x" ]; then
+        echo "  Zoom: $zoom"
+    fi
     if [ -n "$device" ]; then
         echo "  Phone: $device"
     fi
@@ -197,6 +208,23 @@ cmd_start() {
             scrcpy_cmd="$scrcpy_cmd --capture-orientation=$rotation"
         fi
     fi
+    if [ "$zoom" != "1x" ]; then
+        local orig_w=$(echo "$res" | cut -dx -f1)
+        local orig_h=$(echo "$res" | cut -dx -f2)
+        local factor
+        case $zoom in
+            1.5x) factor="1.5" ;;
+            2x) factor="2" ;;
+            3x) factor="3" ;;
+            4x) factor="4" ;;
+            *) factor="1" ;;
+        esac
+        local crop_w=$(echo "$orig_w / $factor" | bc)
+        local crop_h=$(echo "$orig_h / $factor" | bc)
+        local crop_x=$(echo "($orig_w - $crop_w) / 2" | bc)
+        local crop_y=$(echo "($orig_h - $crop_h) / 2" | bc)
+        scrcpy_cmd="$scrcpy_cmd --crop=$crop_w:$crop_h:$crop_x:$crop_y"
+    fi
 
     nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
 
@@ -213,6 +241,7 @@ cmd_start() {
         echo "quality=$quality" >> "$CONFIG_FILE"
         echo "bitrate=$bitrate" >> "$CONFIG_FILE"
         echo "mirror=$mirror" >> "$CONFIG_FILE"
+        echo "zoom=$zoom" >> "$CONFIG_FILE"
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
@@ -525,6 +554,7 @@ cmd_help() {
     echo "  --camera-id   Camera ID for specific lens (use 'list' to see IDs)"
     echo "  --rotation    Rotate camera: 0 (default), 90, 180, 270"
     echo "  --mirror      Mirror/flip video horizontally: off (default), on"
+    echo "  --zoom        Digital zoom level: 1x (default), 1.5x, 2x, 3x, 4x"
     echo "  --quality     Video quality: low (4M), medium (8M), high (16M, default), ultra (32M)"
     echo "  --bitrate     Custom bitrate (e.g. 20M, 25M) - overrides --quality"
     echo "  --device      Select device by serial (for multiple phones)"
@@ -556,6 +586,7 @@ cmd_help() {
     echo "  popdroidcam start --quality ultra      # Best quality"
     echo "  popdroidcam start --bitrate 20M        # Custom bitrate"
     echo "  popdroidcam start --mirror on          # Mirror/flip horizontally"
+    echo "  popdroidcam start --zoom 2x            # 2x digital zoom"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
     echo "  popdroidcam start --camera-id 2        # Use another lens (e.g. wide)"
     echo "  popdroidcam start --device 192.168.1.100:5555"

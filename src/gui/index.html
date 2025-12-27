@@ -287,11 +287,24 @@
                 <option value="270">270°</option>
               </select>
             </div>
+          </div>
+
+          <div class="row">
             <div class="field">
               <label class="field-label">Mirror</label>
               <select id="mirrorSelect">
                 <option value="off">Off</option>
                 <option value="on">On</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Zoom</label>
+              <select id="zoomSelect">
+                <option value="1x" selected>1x</option>
+                <option value="1.5x">1.5x</option>
+                <option value="2x">2x</option>
+                <option value="3x">3x</option>
+                <option value="4x">4x</option>
               </select>
             </div>
           </div>
@@ -461,7 +474,8 @@
           const rotationText = status.config.rotation && status.config.rotation !== '0' ? ` ${status.config.rotation}°` : '';
           const qualityText = status.config.quality ? ` ${status.config.quality}` : '';
           const mirrorText = status.config.mirror === 'on' ? ' mirrored' : '';
-          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}${mirrorText}`;
+          const zoomText = status.config.zoom && status.config.zoom !== '1x' ? ` ${status.config.zoom}` : '';
+          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}${mirrorText}${zoomText}`;
           startBtn.classList.add('hidden');
           stopBtn.classList.remove('hidden');
           if (!wasRunning) setTimeout(startPreview, 500);
@@ -589,6 +603,7 @@
       const rotation = document.getElementById('rotationSelect').value;
       const quality = document.getElementById('qualitySelect').value;
       const mirror = document.getElementById('mirrorSelect').value;
+      const zoom = document.getElementById('zoomSelect').value;
       if (!cameraId || !resolution || !fps) {
         showMessage('cameraMessage', 'Select camera, resolution & FPS', true);
         return;
@@ -597,7 +612,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loader"></span>';
       try {
-        const res = await api('/start', 'POST', { cameraId, resolution, fps, serial, rotation, quality, mirror });
+        const res = await api('/start', 'POST', { cameraId, resolution, fps, serial, rotation, quality, mirror, zoom });
         if (res.success) {
           showMessage('cameraMessage', 'Stream started');
           refreshStatus();

@@ -15,15 +15,17 @@ import {
   ROTATION_OPTIONS,
   VIDEO_QUALITY_OPTIONS,
   MIRROR_OPTIONS,
+  ZOOM_OPTIONS,
   type Device,
   type Camera,
   type Rotation,
   type VideoQuality,
   type Mirror,
+  type ZoomLevel,
 } from "./utils.js";
 
 type Tab = "camera" | "connect";
-type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "mirror" | "actions";
+type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "mirror" | "zoom" | "actions";
 type ConnectFocus = "pair_ip" | "pair_port" | "pair_code" | "conn_ip" | "conn_port" | "actions";
 
 interface LogEntry {
@@ -99,6 +101,7 @@ function App() {
   const [selectedRotation, setSelectedRotation] = useState<Rotation>("0");
   const [selectedQuality, setSelectedQuality] = useState<VideoQuality>("high");
   const [selectedMirror, setSelectedMirror] = useState<Mirror>("off");
+  const [selectedZoom, setSelectedZoom] = useState<ZoomLevel>("1x");
 
   const [streamRunning, setStreamRunning] = useState(false);
   const [streamConfig, setStreamConfig] = useState<Record<string, string>>({});
@@ -181,7 +184,7 @@ function App() {
       return;
     }
 
-    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}...`);
+    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}${selectedZoom !== "1x" ? ` ${selectedZoom}` : ""}...`);
     const result = startStream({
       cameraId: selectedCamera,
       resolution: selectedResolution,
@@ -190,6 +193,7 @@ function App() {
       rotation: selectedRotation,
       quality: selectedQuality,
       mirror: selectedMirror,
+      zoom: selectedZoom,
     });
 
     if (result.success) {
@@ -253,7 +257,7 @@ function App() {
     : [];
   const fpsOptions: string[] = currentCamera ? currentCamera.fps : [];
 
-  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "mirror", "actions"];
+  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "mirror", "zoom", "actions"];
   const connectFocusOrder: ConnectFocus[] = ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port", "actions"];
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
@@ -309,6 +313,7 @@ function App() {
       if (input === "t") { setTab("camera"); setCameraFocus("rotation"); return; }
       if (input === "q") { setTab("camera"); setCameraFocus("quality"); return; }
       if (input === "m") { setTab("camera"); setCameraFocus("mirror"); return; }
+      if (input === "z") { setTab("camera"); setCameraFocus("zoom"); return; }
       if (input === "a") { setTab("camera"); setCameraFocus("actions"); return; }
       if (input === "p") { setTab("connect"); setConnectFocus("pair_ip"); return; }
       if (input === "o") { setTab("connect"); setConnectFocus("conn_ip"); return; }
@@ -359,6 +364,8 @@ function App() {
           setSelectedQuality(cycleValue(VIDEO_QUALITY_OPTIONS, selectedQuality, dir) as VideoQuality);
         } else if (cameraFocus === "mirror") {
           setSelectedMirror(cycleValue(MIRROR_OPTIONS, selectedMirror, dir) as Mirror);
+        } else if (cameraFocus === "zoom") {
+          setSelectedZoom(cycleValue(ZOOM_OPTIONS, selectedZoom, dir) as ZoomLevel);
         } else if (cameraFocus === "actions") {
           setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }
@@ -427,7 +434,7 @@ function App() {
     : "Stopped";
 
   const shortcutHelp = tab === "camera" 
-    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual ^M:mirror | s:start x:stop r:refresh"
+    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual ^M:mirror ^Z:zoom | s:start x:stop r:refresh"
     : "^P:pair ^O:conn | Esc:exit input | r:refresh";
 
   return (
@@ -515,6 +522,15 @@ function App() {
                 items={MIRROR_OPTIONS}
                 selected={selectedMirror}
                 focused={cameraFocus === "mirror"}
+              />
+            </Box>
+            <Box width={24}>
+              <InlineSelector
+                label="Zoom"
+                shortcut="^Z"
+                items={ZOOM_OPTIONS}
+                selected={selectedZoom}
+                focused={cameraFocus === "zoom"}
               />
             </Box>
           </Box>

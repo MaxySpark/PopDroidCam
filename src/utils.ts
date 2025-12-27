@@ -16,6 +16,17 @@ export const ROTATION_OPTIONS: Rotation[] = ["0", "90", "180", "270"];
 export type Mirror = "off" | "on";
 export const MIRROR_OPTIONS: Mirror[] = ["off", "on"];
 
+// Zoom levels (digital zoom via crop)
+export type ZoomLevel = "1x" | "1.5x" | "2x" | "3x" | "4x";
+export const ZOOM_OPTIONS: ZoomLevel[] = ["1x", "1.5x", "2x", "3x", "4x"];
+export const ZOOM_FACTORS: Record<ZoomLevel, number> = {
+  "1x": 1.0,
+  "1.5x": 1.5,
+  "2x": 2.0,
+  "3x": 3.0,
+  "4x": 4.0,
+};
+
 // Video quality presets (bitrate in Mbps)
 export type VideoQuality = "low" | "medium" | "high" | "ultra";
 export const VIDEO_QUALITY_OPTIONS: VideoQuality[] = ["low", "medium", "high", "ultra"];
@@ -229,6 +240,7 @@ export interface StartStreamOptions {
   rotation?: Rotation;
   quality?: VideoQuality;
   mirror?: Mirror;
+  zoom?: ZoomLevel;
 }
 
 export function startStream(options: StartStreamOptions): { success: boolean; pid?: number; error?: string } {
@@ -255,6 +267,17 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
     args.push(`--serial=${options.serial}`);
   }
 
+  const zoom = options.zoom || "1x";
+  if (zoom !== "1x") {
+    const factor = ZOOM_FACTORS[zoom];
+    const [width, height] = options.resolution.split("x").map(Number);
+    const cropW = Math.floor(width / factor);
+    const cropH = Math.floor(height / factor);
+    const cropX = Math.floor((width - cropW) / 2);
+    const cropY = Math.floor((height - cropH) / 2);
+    args.push(`--crop=${cropW}:${cropH}:${cropX}:${cropY}`);
+  }
+
   const rotation = options.rotation || "0";
   const mirror = options.mirror || "off";
   
@@ -279,7 +302,7 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
 
     if (pid) {
       writeFileSync(PID_FILE, String(pid));
-      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\nmirror=${options.mirror || "off"}\n`);
+      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\nmirror=${options.mirror || "off"}\nzoom=${options.zoom || "1x"}\n`);
       return { success: true, pid };
     }
     return { success: false, error: "Failed to start process" };
