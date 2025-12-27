@@ -13,6 +13,9 @@ export const PREFERRED_RESOLUTIONS = ["1920x1080", "1280x720", "1920x1440", "256
 export type Rotation = "0" | "90" | "180" | "270";
 export const ROTATION_OPTIONS: Rotation[] = ["0", "90", "180", "270"];
 
+export type Mirror = "off" | "on";
+export const MIRROR_OPTIONS: Mirror[] = ["off", "on"];
+
 // Video quality presets (bitrate in Mbps)
 export type VideoQuality = "low" | "medium" | "high" | "ultra";
 export const VIDEO_QUALITY_OPTIONS: VideoQuality[] = ["low", "medium", "high", "ultra"];
@@ -28,6 +31,8 @@ export interface Device {
   state: string;
   type: "WiFi" | "USB";
   model?: string;
+  battery?: number;
+  charging?: boolean;
 }
 
 export interface Camera {
@@ -92,6 +97,26 @@ export function getCurrentConfig(): Config {
   return config;
 }
 
+export function getBatteryInfo(serial?: string): { level: number; charging: boolean } | null {
+  try {
+    const args = serial ? ["-s", serial, "shell", "dumpsys", "battery"] : ["shell", "dumpsys", "battery"];
+    const result = spawnSync("adb", args, { timeout: 3000, encoding: "utf-8" });
+    if (result.status !== 0) return null;
+    
+    const levelMatch = result.stdout.match(/level:\s*(\d+)/);
+    const statusMatch = result.stdout.match(/status:\s*(\d+)/);
+    
+    if (levelMatch) {
+      const level = parseInt(levelMatch[1], 10);
+      const charging = statusMatch ? parseInt(statusMatch[1], 10) === 2 : false;
+      return { level, charging };
+    }
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
 export function getDevices(): Device[] {
   try {
     const result = spawnSync("adb", ["devices", "-l"], { timeout: 5000, encoding: "utf-8" });
@@ -106,11 +131,24 @@ export function getDevices(): Device[] {
           const state = parts[1];
           const modelMatch = line.match(/model:(\S+)/);
           const model = modelMatch ? modelMatch[1].replace(/_/g, " ") : undefined;
+          
+          let battery: number | undefined;
+          let charging: boolean | undefined;
+          if (state === "device") {
+            const batteryInfo = getBatteryInfo(serial);
+            if (batteryInfo) {
+              battery = batteryInfo.level;
+              charging = batteryInfo.charging;
+            }
+          }
+          
           devices.push({
             serial,
             state,
             type: serial.includes(":") ? "WiFi" : "USB",
             model,
+            battery,
+            charging,
           });
         }
       }
@@ -190,6 +228,7 @@ export interface StartStreamOptions {
   serial?: string;
   rotation?: Rotation;
   quality?: VideoQuality;
+  mirror?: Mirror;
 }
 
 export function startStream(options: StartStreamOptions): { success: boolean; pid?: number; error?: string } {
@@ -216,8 +255,12 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
     args.push(`--serial=${options.serial}`);
   }
 
-  if (options.rotation && options.rotation !== "0") {
-    args.push(`--capture-orientation=${options.rotation}`);
+  const rotation = options.rotation || "0";
+  const mirror = options.mirror || "off";
+  
+  if (mirror === "on" || rotation !== "0") {
+    const orientationValue = mirror === "on" ? `flip${rotation}` : rotation;
+    args.push(`--capture-orientation=${orientationValue}`);
   }
 
   try {
@@ -236,7 +279,7 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
 
     if (pid) {
       writeFileSync(PID_FILE, String(pid));
-      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\n`);
+      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\nmirror=${options.mirror || "off"}\n`);
       return { success: true, pid };
     }
     return { success: false, error: "Failed to start process" };

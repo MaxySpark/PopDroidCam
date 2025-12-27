@@ -52,6 +52,27 @@ is_running() {
     return 1
 }
 
+get_battery_info() {
+    local serial="$1"
+    local battery_output
+    if [ -n "$serial" ]; then
+        battery_output=$(adb -s "$serial" shell dumpsys battery 2>/dev/null)
+    else
+        battery_output=$(adb shell dumpsys battery 2>/dev/null)
+    fi
+    
+    local level=$(echo "$battery_output" | grep -E "^\s*level:" | sed 's/.*level:\s*//')
+    local status=$(echo "$battery_output" | grep -E "^\s*status:" | sed 's/.*status:\s*//')
+    
+    if [ -n "$level" ]; then
+        local charging=""
+        if [ "$status" == "2" ]; then
+            charging="⚡"
+        fi
+        echo "${level}%${charging}"
+    fi
+}
+
 cmd_start() {
     if is_running; then
         echo -e "${YELLOW}Camera already running (PID: $(cat "$PID_FILE"))${NC}"
@@ -67,6 +88,7 @@ cmd_start() {
     local rotation="0"
     local quality="high"
     local bitrate="16M"
+    local mirror="off"
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -117,6 +139,13 @@ cmd_start() {
                 quality="custom"
                 shift 2
                 ;;
+            --mirror)
+                case $2 in
+                    on|off) mirror="$2" ;;
+                    *) echo -e "${RED}Invalid mirror value. Use on or off.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
             *)
                 shift
                 ;;
@@ -145,6 +174,9 @@ cmd_start() {
     if [ "$rotation" != "0" ]; then
         echo "  Rotation: ${rotation}°"
     fi
+    if [ "$mirror" == "on" ]; then
+        echo "  Mirror: on"
+    fi
     if [ -n "$device" ]; then
         echo "  Phone: $device"
     fi
@@ -158,8 +190,12 @@ cmd_start() {
     if [ -n "$device" ]; then
         scrcpy_cmd="$scrcpy_cmd --serial=$device"
     fi
-    if [ "$rotation" != "0" ]; then
-        scrcpy_cmd="$scrcpy_cmd --capture-orientation=$rotation"
+    if [ "$mirror" == "on" ] || [ "$rotation" != "0" ]; then
+        if [ "$mirror" == "on" ]; then
+            scrcpy_cmd="$scrcpy_cmd --capture-orientation=flip$rotation"
+        else
+            scrcpy_cmd="$scrcpy_cmd --capture-orientation=$rotation"
+        fi
     fi
 
     nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
@@ -176,6 +212,7 @@ cmd_start() {
         echo "rotation=$rotation" >> "$CONFIG_FILE"
         echo "quality=$quality" >> "$CONFIG_FILE"
         echo "bitrate=$bitrate" >> "$CONFIG_FILE"
+        echo "mirror=$mirror" >> "$CONFIG_FILE"
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
@@ -231,10 +268,18 @@ cmd_status() {
     if [ -n "$device_line" ]; then
         local device=$(echo "$device_line" | cut -f1)
         local state=$(echo "$device_line" | cut -f2)
+        local battery=""
+        if [ "$state" == "device" ]; then
+            battery=$(get_battery_info "$device")
+        fi
+        local battery_display=""
+        if [ -n "$battery" ]; then
+            battery_display=" [🔋 $battery]"
+        fi
         if [[ "$device" == *":"* ]]; then
-            echo -e "  Phone: ${GREEN}Connected (WiFi)${NC} ($device)"
+            echo -e "  Phone: ${GREEN}Connected (WiFi)${NC} ($device)$battery_display"
         else
-            echo -e "  Phone: ${GREEN}Connected (USB)${NC} ($device)"
+            echo -e "  Phone: ${GREEN}Connected (USB)${NC} ($device)$battery_display"
         fi
         if [ "$state" == "unauthorized" ]; then
             echo -e "         ${YELLOW}⚠ Unauthorized - accept prompt on phone${NC}"
@@ -315,11 +360,24 @@ cmd_devices() {
             local serial=$(echo "$line" | awk '{print $1}')
             local state=$(echo "$line" | awk '{print $2}')
             local model=$(echo "$line" | grep -oP 'model:\K\S+' | tr '_' ' ')
+            local battery=""
+            
+            if [ "$state" == "device" ]; then
+                battery=$(get_battery_info "$serial")
+            fi
             
             if [ -n "$model" ]; then
-                echo -e "  ${GREEN}$model${NC} ($serial) - $state"
+                if [ -n "$battery" ]; then
+                    echo -e "  ${GREEN}$model${NC} ($serial) - $state [🔋 $battery]"
+                else
+                    echo -e "  ${GREEN}$model${NC} ($serial) - $state"
+                fi
             else
-                echo "  $serial - $state"
+                if [ -n "$battery" ]; then
+                    echo "  $serial - $state [🔋 $battery]"
+                else
+                    echo "  $serial - $state"
+                fi
             fi
         fi
     done
@@ -466,6 +524,7 @@ cmd_help() {
     echo "  --camera      Camera facing: back (default), front"
     echo "  --camera-id   Camera ID for specific lens (use 'list' to see IDs)"
     echo "  --rotation    Rotate camera: 0 (default), 90, 180, 270"
+    echo "  --mirror      Mirror/flip video horizontally: off (default), on"
     echo "  --quality     Video quality: low (4M), medium (8M), high (16M, default), ultra (32M)"
     echo "  --bitrate     Custom bitrate (e.g. 20M, 25M) - overrides --quality"
     echo "  --device      Select device by serial (for multiple phones)"
@@ -496,6 +555,7 @@ cmd_help() {
     echo "  popdroidcam start --res 4k --fps 30"
     echo "  popdroidcam start --quality ultra      # Best quality"
     echo "  popdroidcam start --bitrate 20M        # Custom bitrate"
+    echo "  popdroidcam start --mirror on          # Mirror/flip horizontally"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
     echo "  popdroidcam start --camera-id 2        # Use another lens (e.g. wide)"
     echo "  popdroidcam start --device 192.168.1.100:5555"

@@ -200,11 +200,11 @@ popdroidcam
 ```
 
 Interactive terminal interface with:
-- **Camera tab**: Select device, camera/lens, resolution, FPS, rotation
+- **Camera tab**: Select device, camera/lens, resolution, FPS, rotation, mirror
 - **Connect tab**: Pair and connect to phones over WiFi
 - Device dropdown shows phone model names
 - Keyboard shortcuts: `Tab` to switch tabs, `Enter` to select, `r` to refresh, `q` to quit
-- Rotation toggle with `Ctrl+T`
+- Rotation toggle with `Ctrl+T`, Mirror toggle with `Ctrl+M`
 
 ### CLI Commands
 
@@ -225,6 +225,7 @@ popdroidcam start
 popdroidcam start --res 4k --fps 30
 popdroidcam start --res 1080p --fps 30 --camera front
 popdroidcam start --rotation 90
+popdroidcam start --mirror on
 
 # Stop camera
 popdroidcam stop
@@ -299,6 +300,7 @@ popdroidcam disconnect
 | `--camera` | `front`, `back` | `back` | Camera facing direction |
 | `--camera-id` | `0`, `1`, `2`, etc. | - | Specific camera lens ID |
 | `--rotation` | `0`, `90`, `180`, `270` | `0` | Rotate camera output |
+| `--mirror` | `off`, `on` | `off` | Mirror/flip video horizontally |
 | `--device` | Serial or IP:port | Auto-detect | Select specific phone |
 
 **Resolution presets:**
@@ -332,8 +334,11 @@ popdroidcam start --camera-id 2
 # Rotated 90 degrees (portrait to landscape)
 popdroidcam start --rotation 90
 
+# Mirror video horizontally (useful for front camera)
+popdroidcam start --mirror on
+
 # Combine options
-popdroidcam start --res 1080p --fps 30 --camera-id 0 --rotation 90
+popdroidcam start --res 1080p --fps 30 --camera-id 0 --rotation 90 --mirror on
 
 # Check status / stop
 popdroidcam status
@@ -380,6 +385,23 @@ popdroidcam start --rotation 270
 ```
 
 In the Desktop/Web/TUI interfaces, use the rotation dropdown or `Ctrl+T` shortcut.
+
+### Video Mirroring
+
+Mirror (flip horizontally) the camera output, useful for front-facing cameras:
+
+```bash
+# No mirroring (default)
+popdroidcam start --mirror off
+
+# Mirror horizontally
+popdroidcam start --mirror on
+
+# Combine with rotation
+popdroidcam start --mirror on --rotation 90
+```
+
+In the Desktop/Web/TUI interfaces, use the mirror dropdown or `Ctrl+M` shortcut.
 
 ### Multiple Devices
 

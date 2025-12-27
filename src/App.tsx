@@ -14,14 +14,16 @@ import {
   PREFERRED_RESOLUTIONS,
   ROTATION_OPTIONS,
   VIDEO_QUALITY_OPTIONS,
+  MIRROR_OPTIONS,
   type Device,
   type Camera,
   type Rotation,
   type VideoQuality,
+  type Mirror,
 } from "./utils.js";
 
 type Tab = "camera" | "connect";
-type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "actions";
+type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "mirror" | "actions";
 type ConnectFocus = "pair_ip" | "pair_port" | "pair_code" | "conn_ip" | "conn_port" | "actions";
 
 interface LogEntry {
@@ -96,6 +98,7 @@ function App() {
   const [selectedFps, setSelectedFps] = useState<string>("30");
   const [selectedRotation, setSelectedRotation] = useState<Rotation>("0");
   const [selectedQuality, setSelectedQuality] = useState<VideoQuality>("high");
+  const [selectedMirror, setSelectedMirror] = useState<Mirror>("off");
 
   const [streamRunning, setStreamRunning] = useState(false);
   const [streamConfig, setStreamConfig] = useState<Record<string, string>>({});
@@ -178,7 +181,7 @@ function App() {
       return;
     }
 
-    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}...`);
+    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}...`);
     const result = startStream({
       cameraId: selectedCamera,
       resolution: selectedResolution,
@@ -186,6 +189,7 @@ function App() {
       serial: selectedDevice || undefined,
       rotation: selectedRotation,
       quality: selectedQuality,
+      mirror: selectedMirror,
     });
 
     if (result.success) {
@@ -194,7 +198,7 @@ function App() {
     } else {
       log(`Error: ${result.error}`, "error");
     }
-  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedRotation, selectedDevice, log, refreshStatus]);
+  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedRotation, selectedMirror, selectedDevice, log, refreshStatus]);
 
   const handleStop = useCallback(() => {
     if (stopStream()) {
@@ -249,7 +253,7 @@ function App() {
     : [];
   const fpsOptions: string[] = currentCamera ? currentCamera.fps : [];
 
-  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "actions"];
+  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "mirror", "actions"];
   const connectFocusOrder: ConnectFocus[] = ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port", "actions"];
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
@@ -304,6 +308,7 @@ function App() {
       if (input === "f") { setTab("camera"); setCameraFocus("fps"); return; }
       if (input === "t") { setTab("camera"); setCameraFocus("rotation"); return; }
       if (input === "q") { setTab("camera"); setCameraFocus("quality"); return; }
+      if (input === "m") { setTab("camera"); setCameraFocus("mirror"); return; }
       if (input === "a") { setTab("camera"); setCameraFocus("actions"); return; }
       if (input === "p") { setTab("connect"); setConnectFocus("pair_ip"); return; }
       if (input === "o") { setTab("connect"); setConnectFocus("conn_ip"); return; }
@@ -352,6 +357,8 @@ function App() {
           setSelectedRotation(cycleValue(ROTATION_OPTIONS, selectedRotation, dir) as Rotation);
         } else if (cameraFocus === "quality") {
           setSelectedQuality(cycleValue(VIDEO_QUALITY_OPTIONS, selectedQuality, dir) as VideoQuality);
+        } else if (cameraFocus === "mirror") {
+          setSelectedMirror(cycleValue(MIRROR_OPTIONS, selectedMirror, dir) as Mirror);
         } else if (cameraFocus === "actions") {
           setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }
@@ -394,7 +401,10 @@ function App() {
     const dev = devices.find(d => d.serial === selectedDevice);
     if (!dev) return selectedDevice || "--";
     const name = dev.model || dev.serial.slice(0, 20);
-    return `${name} (${dev.type})`;
+    const batteryInfo = dev.battery !== undefined 
+      ? ` [${dev.battery}%${dev.charging ? '⚡' : ''}]` 
+      : '';
+    return `${name} (${dev.type})${batteryInfo}`;
   };
 
   const getCameraDisplay = () => {
@@ -410,14 +420,14 @@ function App() {
   };
 
   const statusDevice = devices.length > 0 
-    ? `${devices[0].type}: ${devices[0].model || devices[0].serial.slice(0, 18)}`
+    ? `${devices[0].type}: ${devices[0].model || devices[0].serial.slice(0, 18)}${devices[0].battery !== undefined ? ` [${devices[0].battery}%${devices[0].charging ? '⚡' : ''}]` : ''}`
     : "No device";
   const statusStream = streamRunning 
     ? `Streaming ${streamConfig.res || "?"} @ ${streamConfig.fps || "?"}fps${streamConfig.quality ? ` ${streamConfig.quality}` : ""}`
     : "Stopped";
 
   const shortcutHelp = tab === "camera" 
-    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual | s:start x:stop r:refresh"
+    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual ^M:mirror | s:start x:stop r:refresh"
     : "^P:pair ^O:conn | Esc:exit input | r:refresh";
 
   return (
@@ -496,6 +506,15 @@ function App() {
                 items={VIDEO_QUALITY_OPTIONS}
                 selected={selectedQuality}
                 focused={cameraFocus === "quality"}
+              />
+            </Box>
+            <Box width={24}>
+              <InlineSelector
+                label="Mirror"
+                shortcut="^M"
+                items={MIRROR_OPTIONS}
+                selected={selectedMirror}
+                focused={cameraFocus === "mirror"}
               />
             </Box>
           </Box>

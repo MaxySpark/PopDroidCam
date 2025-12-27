@@ -288,6 +288,13 @@
                 <option value="270">270°</option>
               </select>
             </div>
+            <div class="field">
+              <label class="field-label">Mirror</label>
+              <select id="mirrorSelect">
+                <option value="off">Off</option>
+                <option value="on">On</option>
+              </select>
+            </div>
           </div>
 
           <div class="actions">
@@ -448,7 +455,8 @@
           text.textContent = 'LIVE';
           const rotationText = status.config.rotation && status.config.rotation !== '0' ? ` ${status.config.rotation}°` : '';
           const qualityText = status.config.quality ? ` ${status.config.quality}` : '';
-          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}`;
+          const mirrorText = status.config.mirror === 'on' ? ' mirrored' : '';
+          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}${mirrorText}`;
           startBtn.classList.add('hidden');
           stopBtn.classList.remove('hidden');
           if (!wasRunning) setTimeout(startPreview, 500);
@@ -484,7 +492,10 @@
           const opt = document.createElement('option');
           opt.value = d.serial;
           const name = d.model || d.serial;
-          opt.textContent = `${d.type === 'WiFi' ? '📶' : '🔌'} ${name}`;
+          const batteryInfo = d.battery !== undefined 
+            ? ` [${d.battery}%${d.charging ? '⚡' : ''}]` 
+            : '';
+          opt.textContent = `${d.type === 'WiFi' ? '📶' : '🔌'} ${name}${batteryInfo}`;
           sel.appendChild(opt);
         });
         if (devices.length === 1) sel.value = devices[0].serial;
@@ -575,6 +586,7 @@
       const fps = document.getElementById('fpsSelect').value;
       const rotation = document.getElementById('rotationSelect').value;
       const quality = document.getElementById('qualitySelect').value;
+      const mirror = document.getElementById('mirrorSelect').value;
       if (!cameraId || !resolution || !fps) {
         showMessage('cameraMessage', 'Select camera, resolution & FPS', true);
         return;
@@ -583,7 +595,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loader"></span>';
       try {
-        const res = await api.startStream({ cameraId, resolution, fps, serial, rotation, quality });
+        const res = await api.startStream({ cameraId, resolution, fps, serial, rotation, quality, mirror });
         if (res.success) {
           showMessage('cameraMessage', 'Stream started');
           refreshStatus();
