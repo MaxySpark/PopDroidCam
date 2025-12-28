@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     serial?: string;
     rotation?: string;
     quality?: string;
+    mirror?: string;
+    zoom?: string;
+    effect?: string;
   }) => ipcRenderer.invoke("start-stream", options),
   stopStream: () => ipcRenderer.invoke("stop-stream"),
   
@@ -33,6 +36,9 @@ declare global {
         serial?: string;
         rotation?: string;
         quality?: string;
+        mirror?: string;
+        zoom?: string;
+        effect?: string;
       }) => Promise<{ success: boolean; pid?: number; error?: string }>;
       stopStream: () => Promise<boolean>;
       adbConnect: (ip: string, port: string) => Promise<boolean>;

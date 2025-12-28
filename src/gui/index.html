@@ -307,6 +307,14 @@
                 <option value="4x">4x</option>
               </select>
             </div>
+            <div class="field">
+              <label class="field-label">Effect</label>
+              <select id="effectSelect">
+                <option value="off" selected>Off</option>
+                <option value="beauty">Beauty</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </div>
           </div>
 
           <div class="actions">
@@ -475,7 +483,8 @@
           const qualityText = status.config.quality ? ` ${status.config.quality}` : '';
           const mirrorText = status.config.mirror === 'on' ? ' mirrored' : '';
           const zoomText = status.config.zoom && status.config.zoom !== '1x' ? ` ${status.config.zoom}` : '';
-          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}${mirrorText}${zoomText}`;
+          const effectText = status.config.effect && status.config.effect !== 'off' ? ` ${status.config.effect}` : '';
+          cfg.textContent = `• ${status.config.res} @ ${status.config.fps}fps${qualityText}${rotationText}${mirrorText}${zoomText}${effectText}`;
           startBtn.classList.add('hidden');
           stopBtn.classList.remove('hidden');
           if (!wasRunning) setTimeout(startPreview, 500);
@@ -604,6 +613,7 @@
       const quality = document.getElementById('qualitySelect').value;
       const mirror = document.getElementById('mirrorSelect').value;
       const zoom = document.getElementById('zoomSelect').value;
+      const effect = document.getElementById('effectSelect').value;
       if (!cameraId || !resolution || !fps) {
         showMessage('cameraMessage', 'Select camera, resolution & FPS', true);
         return;
@@ -612,7 +622,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loader"></span>';
       try {
-        const res = await api('/start', 'POST', { cameraId, resolution, fps, serial, rotation, quality, mirror, zoom });
+        const res = await api('/start', 'POST', { cameraId, resolution, fps, serial, rotation, quality, mirror, zoom, effect });
         if (res.success) {
           showMessage('cameraMessage', 'Stream started');
           refreshStatus();

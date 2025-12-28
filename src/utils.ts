@@ -27,6 +27,11 @@ export const ZOOM_FACTORS: Record<ZoomLevel, number> = {
   "4x": 4.0,
 };
 
+export type EffectMode = "off" | "beauty" | "portrait";
+export const EFFECT_OPTIONS: EffectMode[] = ["off", "beauty", "portrait"];
+
+const FFMPEG_PID_FILE = join(STATE_DIR, "ffmpeg_pid");
+
 // Video quality presets (bitrate in Mbps)
 export type VideoQuality = "low" | "medium" | "high" | "ultra";
 export const VIDEO_QUALITY_OPTIONS: VideoQuality[] = ["low", "medium", "high", "ultra"];
@@ -241,6 +246,7 @@ export interface StartStreamOptions {
   quality?: VideoQuality;
   mirror?: Mirror;
   zoom?: ZoomLevel;
+  effect?: EffectMode;
 }
 
 export function startStream(options: StartStreamOptions): { success: boolean; pid?: number; error?: string } {
@@ -251,6 +257,7 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
   const v4l2Device = findV4l2LoopbackDevice();
   const quality = options.quality || "high";
   const bitrate = VIDEO_QUALITY_BITRATES[quality];
+  const effect = options.effect || "off";
   
   const args = [
     "--video-source=camera",
@@ -258,10 +265,18 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
     `--camera-size=${options.resolution}`,
     `--camera-fps=${options.fps}`,
     `--video-bit-rate=${bitrate}`,
-    `--v4l2-sink=${v4l2Device}`,
     "--no-window",
     "--no-audio",
   ];
+
+  // When effects are enabled, output raw video to stdout for FFmpeg processing
+  // When no effects, output directly to v4l2 device (zero latency)
+  if (effect === "off") {
+    args.push(`--v4l2-sink=${v4l2Device}`);
+  } else {
+    args.push("--video-codec=raw");
+    args.push("-");
+  }
   
   if (options.serial) {
     args.push(`--serial=${options.serial}`);
@@ -291,18 +306,46 @@ export function startStream(options: StartStreamOptions): { success: boolean; pi
     const logPath = join(STATE_DIR, "scrcpy.log");
     const logFd = openSync(logPath, "w");
     
-    const proc = spawn("scrcpy", args, {
-      detached: true,
-      stdio: ["ignore", logFd, logFd],
-    });
+    let pid: number | undefined;
 
-    proc.unref();
+    if (effect === "off") {
+      // Direct mode: scrcpy -> v4l2 device (no latency)
+      const proc = spawn("scrcpy", args, {
+        detached: true,
+        stdio: ["ignore", logFd, logFd],
+      });
+      proc.unref();
+      pid = proc.pid;
+    } else {
+      // Effect mode: scrcpy -> FFmpeg -> v4l2 device
+      // Get FFmpeg filter based on effect type
+      let ffmpegFilter = "";
+      if (effect === "beauty") {
+        // Skin smoothing effect using bilateral filter
+        ffmpegFilter = "unsharp=5:5:-0.5:5:5:-0.5";
+      } else if (effect === "portrait") {
+        // Background blur effect (simplified, applies to whole frame)
+        ffmpegFilter = "boxblur=4:2";
+      }
+
+      const [width, height] = options.resolution.split("x").map(Number);
+      
+      // Use shell to pipe scrcpy to ffmpeg
+      const shellCmd = `scrcpy ${args.join(" ")} 2>>"${logPath}" | ffmpeg -f rawvideo -pix_fmt bgra -s ${width}x${height} -r ${options.fps} -i - -vf "${ffmpegFilter}" -f v4l2 -pix_fmt yuv420p "${v4l2Device}" 2>>"${logPath}"`;
+      
+      const proc = spawn("sh", ["-c", shellCmd], {
+        detached: true,
+        stdio: ["ignore", logFd, logFd],
+      });
+      proc.unref();
+      pid = proc.pid;
+    }
+
     close(logFd);
-    const pid = proc.pid;
 
     if (pid) {
       writeFileSync(PID_FILE, String(pid));
-      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\nmirror=${options.mirror || "off"}\nzoom=${options.zoom || "1x"}\n`);
+      writeFileSync(CONFIG_FILE, `res=${options.resolution}\nfps=${options.fps}\ncamera_id=${options.cameraId}\ndevice=${v4l2Device}\nrotation=${options.rotation || "0"}\nquality=${quality}\nmirror=${options.mirror || "off"}\nzoom=${options.zoom || "1x"}\neffect=${effect}\n`);
       return { success: true, pid };
     }
     return { success: false, error: "Failed to start process" };

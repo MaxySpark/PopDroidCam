@@ -90,6 +90,7 @@ cmd_start() {
     local bitrate="16M"
     local mirror="off"
     local zoom="1x"
+    local effect="off"
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -154,6 +155,13 @@ cmd_start() {
                 esac
                 shift 2
                 ;;
+            --effect)
+                case $2 in
+                    off|beauty|portrait) effect="$2" ;;
+                    *) echo -e "${RED}Invalid effect. Use off, beauty, or portrait.${NC}"; exit 1 ;;
+                esac
+                shift 2
+                ;;
             *)
                 shift
                 ;;
@@ -188,11 +196,21 @@ cmd_start() {
     if [ "$zoom" != "1x" ]; then
         echo "  Zoom: $zoom"
     fi
+    if [ "$effect" != "off" ]; then
+        echo "  Effect: $effect"
+    fi
     if [ -n "$device" ]; then
         echo "  Phone: $device"
     fi
 
-    local scrcpy_cmd="scrcpy --video-source=camera --camera-size=$res --camera-fps=$fps --video-bit-rate=$bitrate --v4l2-sink=$v4l2_device --no-window --no-audio"
+    local scrcpy_cmd="scrcpy --video-source=camera --camera-size=$res --camera-fps=$fps --video-bit-rate=$bitrate --no-window --no-audio"
+    
+    if [ "$effect" == "off" ]; then
+        scrcpy_cmd="$scrcpy_cmd --v4l2-sink=$v4l2_device"
+    else
+        scrcpy_cmd="$scrcpy_cmd --video-codec=raw -"
+    fi
+    
     if [ -n "$camera_id" ]; then
         scrcpy_cmd="$scrcpy_cmd --camera-id=$camera_id"
     else
@@ -226,7 +244,18 @@ cmd_start() {
         scrcpy_cmd="$scrcpy_cmd --crop=$crop_w:$crop_h:$crop_x:$crop_y"
     fi
 
-    nohup $scrcpy_cmd > "$STATE_DIR/scrcpy.log" 2>&1 &
+    if [ "$effect" != "off" ]; then
+        local orig_w=$(echo "$res" | cut -dx -f1)
+        local orig_h=$(echo "$res" | cut -dx -f2)
+        local ffmpeg_filter=""
+        case $effect in
+            beauty) ffmpeg_filter="unsharp=5:5:-0.5:5:5:-0.5" ;;
+            portrait) ffmpeg_filter="boxblur=4:2" ;;
+        esac
+        scrcpy_cmd="$scrcpy_cmd 2>>\"$STATE_DIR/scrcpy.log\" | ffmpeg -f rawvideo -pix_fmt bgra -s ${orig_w}x${orig_h} -r $fps -i - -vf \"$ffmpeg_filter\" -f v4l2 -pix_fmt yuv420p \"$v4l2_device\" 2>>\"$STATE_DIR/scrcpy.log\""
+    fi
+
+    nohup sh -c "$scrcpy_cmd" > "$STATE_DIR/scrcpy.log" 2>&1 &
 
     local pid=$!
     sleep 2
@@ -242,6 +271,7 @@ cmd_start() {
         echo "bitrate=$bitrate" >> "$CONFIG_FILE"
         echo "mirror=$mirror" >> "$CONFIG_FILE"
         echo "zoom=$zoom" >> "$CONFIG_FILE"
+        echo "effect=$effect" >> "$CONFIG_FILE"
         echo "started=$(date -Iseconds)" >> "$CONFIG_FILE"
         
         echo -e "${GREEN}✓ Camera started (PID: $pid)${NC}"
@@ -555,6 +585,7 @@ cmd_help() {
     echo "  --rotation    Rotate camera: 0 (default), 90, 180, 270"
     echo "  --mirror      Mirror/flip video horizontally: off (default), on"
     echo "  --zoom        Digital zoom level: 1x (default), 1.5x, 2x, 3x, 4x"
+    echo "  --effect      Video effect: off (default), beauty, portrait"
     echo "  --quality     Video quality: low (4M), medium (8M), high (16M, default), ultra (32M)"
     echo "  --bitrate     Custom bitrate (e.g. 20M, 25M) - overrides --quality"
     echo "  --device      Select device by serial (for multiple phones)"
@@ -587,6 +618,8 @@ cmd_help() {
     echo "  popdroidcam start --bitrate 20M        # Custom bitrate"
     echo "  popdroidcam start --mirror on          # Mirror/flip horizontally"
     echo "  popdroidcam start --zoom 2x            # 2x digital zoom"
+    echo "  popdroidcam start --effect beauty      # Skin smoothing effect"
+    echo "  popdroidcam start --effect portrait    # Background blur effect"
     echo "  popdroidcam start --camera-id 0        # Use specific camera lens"
     echo "  popdroidcam start --camera-id 2        # Use another lens (e.g. wide)"
     echo "  popdroidcam start --device 192.168.1.100:5555"

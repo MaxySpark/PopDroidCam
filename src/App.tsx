@@ -16,16 +16,18 @@ import {
   VIDEO_QUALITY_OPTIONS,
   MIRROR_OPTIONS,
   ZOOM_OPTIONS,
+  EFFECT_OPTIONS,
   type Device,
   type Camera,
   type Rotation,
   type VideoQuality,
   type Mirror,
   type ZoomLevel,
+  type EffectMode,
 } from "./utils.js";
 
 type Tab = "camera" | "connect";
-type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "mirror" | "zoom" | "actions";
+type CameraFocus = "device" | "camera" | "resolution" | "fps" | "rotation" | "quality" | "mirror" | "zoom" | "effect" | "actions";
 type ConnectFocus = "pair_ip" | "pair_port" | "pair_code" | "conn_ip" | "conn_port" | "actions";
 
 interface LogEntry {
@@ -102,6 +104,7 @@ function App() {
   const [selectedQuality, setSelectedQuality] = useState<VideoQuality>("high");
   const [selectedMirror, setSelectedMirror] = useState<Mirror>("off");
   const [selectedZoom, setSelectedZoom] = useState<ZoomLevel>("1x");
+  const [selectedEffect, setSelectedEffect] = useState<EffectMode>("off");
 
   const [streamRunning, setStreamRunning] = useState(false);
   const [streamConfig, setStreamConfig] = useState<Record<string, string>>({});
@@ -184,7 +187,7 @@ function App() {
       return;
     }
 
-    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}${selectedZoom !== "1x" ? ` ${selectedZoom}` : ""}...`);
+    log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}${selectedZoom !== "1x" ? ` ${selectedZoom}` : ""}${selectedEffect !== "off" ? ` ${selectedEffect}` : ""}...`);
     const result = startStream({
       cameraId: selectedCamera,
       resolution: selectedResolution,
@@ -194,6 +197,7 @@ function App() {
       quality: selectedQuality,
       mirror: selectedMirror,
       zoom: selectedZoom,
+      effect: selectedEffect,
     });
 
     if (result.success) {
@@ -257,7 +261,7 @@ function App() {
     : [];
   const fpsOptions: string[] = currentCamera ? currentCamera.fps : [];
 
-  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "mirror", "zoom", "actions"];
+  const cameraFocusOrder: CameraFocus[] = ["device", "camera", "resolution", "fps", "rotation", "quality", "mirror", "zoom", "effect", "actions"];
   const connectFocusOrder: ConnectFocus[] = ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port", "actions"];
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
@@ -314,6 +318,7 @@ function App() {
       if (input === "q") { setTab("camera"); setCameraFocus("quality"); return; }
       if (input === "m") { setTab("camera"); setCameraFocus("mirror"); return; }
       if (input === "z") { setTab("camera"); setCameraFocus("zoom"); return; }
+      if (input === "x") { setTab("camera"); setCameraFocus("effect"); return; }
       if (input === "a") { setTab("camera"); setCameraFocus("actions"); return; }
       if (input === "p") { setTab("connect"); setConnectFocus("pair_ip"); return; }
       if (input === "o") { setTab("connect"); setConnectFocus("conn_ip"); return; }
@@ -366,6 +371,8 @@ function App() {
           setSelectedMirror(cycleValue(MIRROR_OPTIONS, selectedMirror, dir) as Mirror);
         } else if (cameraFocus === "zoom") {
           setSelectedZoom(cycleValue(ZOOM_OPTIONS, selectedZoom, dir) as ZoomLevel);
+        } else if (cameraFocus === "effect") {
+          setSelectedEffect(cycleValue(EFFECT_OPTIONS, selectedEffect, dir) as EffectMode);
         } else if (cameraFocus === "actions") {
           setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }
@@ -434,7 +441,7 @@ function App() {
     : "Stopped";
 
   const shortcutHelp = tab === "camera" 
-    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual ^M:mirror ^Z:zoom | s:start x:stop r:refresh"
+    ? "^D:dev ^L:cam ^E:res ^F:fps ^T:rot ^Q:qual ^M:mirror ^Z:zoom ^X:effect | s:start r:refresh"
     : "^P:pair ^O:conn | Esc:exit input | r:refresh";
 
   return (
@@ -531,6 +538,15 @@ function App() {
                 items={ZOOM_OPTIONS}
                 selected={selectedZoom}
                 focused={cameraFocus === "zoom"}
+              />
+            </Box>
+            <Box width={24}>
+              <InlineSelector
+                label="Effect"
+                shortcut="^X"
+                items={EFFECT_OPTIONS}
+                selected={selectedEffect}
+                focused={cameraFocus === "effect"}
               />
             </Box>
           </Box>
