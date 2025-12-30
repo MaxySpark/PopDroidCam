@@ -19,6 +19,8 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 - **CLI + TUI** - Command-line and interactive terminal interface
 - **Background mode** - No window, no dock icon
 
+<img width="1268" height="1356" alt="Image" src="https://github.com/user-attachments/assets/2e134014-7176-4e8d-8e0f-f4854c59a08e" />
+
 ## Quick Start
 
 ```bash
