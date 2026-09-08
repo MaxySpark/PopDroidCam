@@ -21,37 +21,98 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 
 <img width="1268" height="1356" alt="Image" src="https://github.com/user-attachments/assets/2e134014-7176-4e8d-8e0f-f4854c59a08e" />
 
-## Quick Start
+## Install Without Cloning
 
-Prebuilt Windows and Linux packages are available from [GitHub Releases](https://github.com/MaxySpark/PopDroidCam/releases/latest). Windows currently requires OBS Studio; Linux requires the host dependencies listed below.
+Open [GitHub Releases](https://github.com/MaxySpark/PopDroidCam/releases) and choose the newest release.
 
-### Windows 11
+| System | Use |
+|--------|-----|
+| Windows 11 x64 | `PopDroidCam.Setup.<version>.exe` |
+| Debian, Ubuntu, Pop!_OS | `popdroidcam_<version>_amd64.deb` or the install script |
+| Arch Linux | Install script (recommended) or `PopDroidCam-<version>.AppImage` |
+| Other x86_64 Linux | `PopDroidCam-<version>.AppImage` |
 
-```powershell
-git clone https://github.com/MaxySpark/PopDroidCam.git
-cd PopDroidCam
-pnpm install
-pnpm run dist:win
-```
+The install script performs a complete Linux setup and gives you the desktop app, CLI, and TUI. Downloaded Linux packages contain the desktop app, but require ADB, scrcpy, and v4l2loopback on the host.
 
-Install the generated `.exe` from `release/`, connect the phone with USB debugging enabled, and complete the one-time OBS setup in [Windows Installation](#windows-installation).
+### Windows 11 x64
 
-### Linux (Arch, Debian, Ubuntu, Pop!_OS)
+1. Install [OBS Studio](https://obsproject.com/).
+2. Download `PopDroidCam.Setup.<version>.exe` from [Releases](https://github.com/MaxySpark/PopDroidCam/releases).
+3. Run the installer. If SmartScreen appears, choose More info > Run anyway; the installer is currently unsigned.
+4. Enable USB debugging on the phone, connect it with a data-capable USB cable, and approve the phone's authorization prompt.
+5. Open PopDroidCam and follow the [one-time OBS setup](#configure-obs-once).
+
+The Windows installer already includes ADB, scrcpy, and their required DLLs. No repository clone, Node.js, or pnpm is needed.
+
+### Linux Install Script (Recommended)
+
+The following command supports Arch Linux, Debian, Ubuntu, and Pop!_OS. It downloads PopDroidCam into `~/.local/popdroidcam`; you do not need to clone the repository yourself.
 
 ```bash
-# One-line install
 curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/install.sh | bash
-
-# 2. Connect phone via USB with debugging enabled
-
-# 3. Launch desktop app
-popdroidcam desktop
-
-# Or start streaming from CLI
-popdroidcam start
-
-# 4. Select "PopDroidCam" in your video app
 ```
+
+If Git is not installed yet, install it first:
+
+```bash
+# Arch Linux
+sudo pacman -S --needed git
+
+# Debian, Ubuntu, or Pop!_OS
+sudo apt install git
+```
+
+Restart the terminal after installation, then run:
+
+```bash
+popdroidcam desktop
+```
+
+Use `popdroidcam start` instead if you prefer the CLI.
+
+### Arch Linux AppImage
+
+Use the AppImage, not the `.deb`, on Arch Linux. Install its host dependencies first. Replace `linux-headers` with the headers package matching an LTS, Zen, or Hardened kernel.
+
+```bash
+sudo pacman -Syu --needed \
+    android-tools scrcpy v4l2loopback-dkms v4l2loopback-utils linux-headers
+sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
+
+chmod +x ~/Downloads/PopDroidCam-*.AppImage
+~/Downloads/PopDroidCam-*.AppImage
+```
+
+Reboot before loading v4l2loopback if `pacman -Syu` upgrades the kernel.
+
+### Debian Package
+
+Download the `.deb` from [Releases](https://github.com/MaxySpark/PopDroidCam/releases), then install it with APT so system package dependencies are resolved:
+
+```bash
+cd ~/Downloads
+sudo apt install ./popdroidcam_*_amd64.deb
+```
+
+ADB, scrcpy 2.x or newer, and v4l2loopback must also be installed. See [Manual Prerequisites](#manual-prerequisites), or use the [install script](#linux-install-script-recommended) on distributions whose repository has an older scrcpy release.
+
+### Linux AppImage
+
+After installing the same Linux host dependencies, download the AppImage from [Releases](https://github.com/MaxySpark/PopDroidCam/releases) and run:
+
+```bash
+chmod +x ~/Downloads/PopDroidCam-*.AppImage
+~/Downloads/PopDroidCam-*.AppImage
+```
+
+### First Run
+
+1. Enable Developer options and USB debugging on the Android phone.
+2. Connect the phone with a data-capable USB cable.
+3. Unlock the phone and approve its `Allow USB debugging?` prompt.
+4. Open PopDroidCam, refresh devices, select the phone, and detect cameras.
+5. Start the camera.
+6. On Linux, select `PopDroidCam` in your calling app. On Windows, route it through [OBS Virtual Camera](#configure-obs-once).
 
 ## Prerequisites
 
@@ -79,7 +140,7 @@ The Windows desktop release requires Windows 11 x64 and OBS Studio. Windows 10, 
 | Package | Purpose |
 |---------|---------|
 | **adb** | Android Debug Bridge for phone communication |
-| **scrcpy 2.x+** | Camera capture from Android (built from source) |
+| **scrcpy 2.x+** | Camera capture from Android |
 | **v4l2loopback** | Virtual webcam kernel module |
 | **ffmpeg** | Video processing |
 | **Bun** | TypeScript runtime |
@@ -102,12 +163,13 @@ The Windows desktop release requires Windows 11 x64 and OBS Studio. Windows 10, 
 ### Requirements
 
 1. Windows 11 x64.
-2. [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/installation) to build from source.
-3. [OBS Studio](https://obsproject.com/) for its virtual camera.
-4. USB debugging enabled on the phone for the current ADB-based transport.
-5. The phone manufacturer's Windows USB driver if the phone does not appear in `adb devices`.
+2. [OBS Studio](https://obsproject.com/) for its virtual camera.
+3. USB debugging enabled on the phone for the current ADB-based transport.
+4. The phone manufacturer's Windows USB driver if the phone does not appear in `adb devices`.
 
-### Build And Install
+[Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/installation) are only required when building from source.
+
+### Build From Source
 
 ```powershell
 pnpm install
@@ -164,7 +226,7 @@ The current Windows release still requires debugging while streaming. None of th
 curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/install.sh | bash
 ```
 
-The installer detects Arch Linux and Debian-based distributions automatically. On Arch, it installs official repository packages with `pacman`, including scrcpy, Bun, pnpm, `v4l2loopback-dkms`, and the headers for standard Arch kernels.
+The installer detects Arch Linux and Debian-based distributions automatically. On Arch, it installs official repository packages with `pacman`, including scrcpy, Bun, pnpm, `v4l2loopback-dkms`, and the headers for standard Arch kernels. You do not need to download an AppImage or `.deb` when using this method.
 
 This will:
 1. Clone the repository to `~/.local/popdroidcam`
@@ -185,7 +247,7 @@ The setup script:
 2. Installs v4l2loopback kernel module
 3. Installs Bun and pnpm for TypeScript runtime
 4. Installs Node.js dependencies (Electron, React, Ink)
-5. Builds scrcpy 2.x from source (required for camera support)
+5. Installs scrcpy from Arch repositories or builds scrcpy 4.1 on Debian-based systems
 6. Builds the desktop app
 7. Adds `popdroidcam` to your PATH (`~/.local/bin`)
 8. Loads the v4l2loopback module
@@ -228,7 +290,7 @@ curl -fsSL https://get.pnpm.io/install.sh | sh -
 sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
 ```
 
-Then build scrcpy 2.x from source (see [scrcpy build instructions](https://github.com/Genymobile/scrcpy/blob/master/doc/linux.md#build)).
+Then build scrcpy 4.1 from source (see [scrcpy build instructions](https://github.com/Genymobile/scrcpy/blob/master/doc/linux.md#build)).
 
 ## Phone Setup
 
