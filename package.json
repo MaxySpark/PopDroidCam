@@ -1,27 +1,33 @@
 {
   "name": "popdroidcam",
   "version": "1.0.0",
-  "description": "Turn your Android phone into a high-quality webcam for Linux",
+  "packageManager": "pnpm@11.0.9",
+  "description": "Turn your Android phone into a high-quality webcam for Linux and Windows",
   "type": "module",
   "main": "dist/desktop/main.js",
   "scripts": {
     "tui": "bun run src/index.tsx",
     "qr": "bun run src/qr-pair.ts",
     "gui": "bun run src/gui/server.ts",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "desktop:build": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && cp -r src/desktop/renderer dist/desktop/",
-    "desktop:dev": "bun run desktop:build && NODE_ENV=development electron dist/desktop/main.js",
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "desktop:dev": "node scripts/run-desktop.mjs",
     "desktop": "electron dist/desktop/main.js",
-    "dist:linux": "bun run desktop:build && electron-builder --linux",
-    "dist:deb": "bun run desktop:build && electron-builder --linux deb",
-    "dist:appimage": "bun run desktop:build && electron-builder --linux AppImage"
+    "dist:linux": "pnpm run desktop:build && electron-builder --linux",
+    "dist:deb": "pnpm run desktop:build && electron-builder --linux deb",
+    "dist:appimage": "pnpm run desktop:build && electron-builder --linux AppImage",
+    "prepare:scrcpy:win": "node scripts/prepare-scrcpy-win.mjs",
+    "dist:win": "pnpm run prepare:scrcpy:win && pnpm run desktop:build && electron-builder --win nsis --x64"
   },
   "keywords": [
     "webcam",
     "android",
     "linux",
+    "windows",
     "scrcpy",
     "v4l2loopback",
+    "obs",
     "desktop"
   ],
   "author": "",
@@ -46,12 +52,12 @@
     "appId": "com.popdroidcam.app",
     "productName": "PopDroidCam",
     "directories": {
-      "output": "release",
-      "buildResources": "assets"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
-      "assets/**/*"
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "linux": {
       "target": [
@@ -65,10 +71,30 @@
         }
       ],
       "category": "Utility",
-      "icon": "assets/icon.png",
       "maintainer": "PopDroidCam",
       "synopsis": "Use your Android phone as a webcam",
       "description": "Turn your Android phone into a high-quality webcam for Linux. No app required on phone - works over USB or WiFi."
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "vendor/scrcpy-win64",
+          "to": "bin"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": true
     }
   }
 }

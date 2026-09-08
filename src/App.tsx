@@ -174,7 +174,7 @@ function App() {
     refreshDevices();
   }, []);
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
     if (streamRunning) {
       log("Already running!", "warning");
       return;
@@ -185,7 +185,7 @@ function App() {
     }
 
     log(`Starting ${selectedCamera} @ ${selectedResolution} ${selectedFps}fps ${selectedQuality}${selectedRotation !== "0" ? ` (${selectedRotation}°)` : ""}${selectedMirror === "on" ? " mirrored" : ""}${selectedZoom !== "1x" ? ` ${selectedZoom}` : ""}...`);
-    const result = startStream({
+    const result = await startStream({
       cameraId: selectedCamera,
       resolution: selectedResolution,
       fps: selectedFps,
@@ -202,7 +202,7 @@ function App() {
     } else {
       log(`Error: ${result.error}`, "error");
     }
-  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedRotation, selectedMirror, selectedDevice, log, refreshStatus]);
+  }, [streamRunning, selectedCamera, selectedResolution, selectedFps, selectedRotation, selectedQuality, selectedMirror, selectedZoom, selectedDevice, log, refreshStatus]);
 
   const handleStop = useCallback(() => {
     if (stopStream()) {
@@ -262,7 +262,7 @@ function App() {
 
   const isInputFocused = tab === "connect" && ["pair_ip", "pair_port", "pair_code", "conn_ip", "conn_port"].includes(connectFocus);
 
-  const cycleValue = (items: string[], current: string, direction: number): string => {
+  const cycleValue = <Value extends string,>(items: Value[], current: Value, direction: number): Value => {
     if (items.length === 0) return current;
     const idx = items.indexOf(current);
     const newIdx = Math.max(0, Math.min(items.length - 1, idx + direction));
@@ -359,13 +359,13 @@ function App() {
         } else if (cameraFocus === "fps") {
           setSelectedFps(cycleValue(fpsOptions, selectedFps, dir));
         } else if (cameraFocus === "rotation") {
-          setSelectedRotation(cycleValue(ROTATION_OPTIONS, selectedRotation, dir) as Rotation);
+          setSelectedRotation(cycleValue(ROTATION_OPTIONS, selectedRotation, dir));
         } else if (cameraFocus === "quality") {
-          setSelectedQuality(cycleValue(VIDEO_QUALITY_OPTIONS, selectedQuality, dir) as VideoQuality);
+          setSelectedQuality(cycleValue(VIDEO_QUALITY_OPTIONS, selectedQuality, dir));
         } else if (cameraFocus === "mirror") {
-          setSelectedMirror(cycleValue(MIRROR_OPTIONS, selectedMirror, dir) as Mirror);
+          setSelectedMirror(cycleValue(MIRROR_OPTIONS, selectedMirror, dir));
         } else if (cameraFocus === "zoom") {
-          setSelectedZoom(cycleValue(ZOOM_OPTIONS, selectedZoom, dir) as ZoomLevel);
+          setSelectedZoom(cycleValue(ZOOM_OPTIONS, selectedZoom, dir));
         } else if (cameraFocus === "actions") {
           setActionIndex((prev) => Math.max(0, Math.min(2, prev + dir)));
         }

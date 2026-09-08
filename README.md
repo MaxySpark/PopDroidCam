@@ -1,8 +1,8 @@
 # PopDroidCam
 
-**Turn your Android phone into a high-quality webcam for Linux.**
+**Turn your Android phone into a high-quality webcam for Linux or Windows 11.**
 
-No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4K, custom resolutions, and camera rotation.
+No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4K, custom resolutions, and camera rotation. Windows output currently uses OBS Virtual Camera.
 
 ## Features
 
@@ -22,6 +22,21 @@ No app installation on phone required. Works over USB or WiFi. Supports 1080p, 4
 <img width="1268" height="1356" alt="Image" src="https://github.com/user-attachments/assets/2e134014-7176-4e8d-8e0f-f4854c59a08e" />
 
 ## Quick Start
+
+Prebuilt Windows and Linux packages are available from [GitHub Releases](https://github.com/MaxySpark/PopDroidCam/releases/latest). Windows currently requires OBS Studio; Linux requires the host dependencies listed below.
+
+### Windows 11
+
+```powershell
+git clone https://github.com/MaxySpark/PopDroidCam.git
+cd PopDroidCam
+pnpm install
+pnpm run dist:win
+```
+
+Install the generated `.exe` from `release/`, connect the phone with USB debugging enabled, and complete the one-time OBS setup in [Windows Installation](#windows-installation).
+
+### Linux
 
 ```bash
 # One-line install
@@ -47,6 +62,8 @@ popdroidcam start
 | **OS** | Linux (tested on Pop!_OS 22.04, Ubuntu 22.04+, Debian 12+) |
 | **Kernel** | v4l2loopback support (most modern kernels) |
 | **Architecture** | x86_64 (amd64) |
+
+The Windows desktop release requires Windows 11 x64 and OBS Studio. Windows 10, Windows ARM64, and a native Windows virtual camera are not supported yet.
 
 ### Phone Requirements
 
@@ -80,7 +97,66 @@ popdroidcam start
 
 > Run `popdroidcam list` to see your phone's capabilities.
 
-## Installation
+## Windows Installation
+
+### Requirements
+
+1. Windows 11 x64.
+2. [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/installation) to build from source.
+3. [OBS Studio](https://obsproject.com/) for its virtual camera.
+4. USB debugging enabled on the phone for the current ADB-based transport.
+5. The phone manufacturer's Windows USB driver if the phone does not appear in `adb devices`.
+
+### Build And Install
+
+```powershell
+pnpm install
+pnpm run dist:win
+```
+
+`dist:win` downloads the pinned official scrcpy 4.1 Windows x64 bundle, verifies SHA-256 `5b12172b3264b2889f4583ee64752ce832e29bc8b1089dca81093459697165db`, builds PopDroidCam, and creates an NSIS installer in `release/`. The generated installer is currently unsigned, so Windows may show a SmartScreen warning.
+
+For development, run:
+
+```powershell
+pnpm run prepare:scrcpy:win
+pnpm run desktop:dev
+```
+
+Set `POPDROIDCAM_BIN_DIR` to use a different scrcpy/ADB directory.
+
+### Connect The Phone
+
+1. Enable Developer options and USB debugging.
+2. Connect a data-capable USB cable.
+3. Unlock the phone and approve its `Allow USB debugging?` prompt.
+4. Open PopDroidCam, refresh devices, select the phone, and detect cameras.
+5. Start at 1920x1080, 30 fps, Medium (8 Mbps). Increase bitrate only after confirming stable latency.
+
+If no phone appears, run the bundled `adb.exe devices -l` from the installed app's `resources\bin` directory. Install the OEM USB driver when Windows lists no ADB interface. An `unauthorized` device means the approval prompt is still waiting on the phone.
+
+### Configure OBS Once
+
+1. Open OBS and set Settings > Video to 1920x1080 at 30 fps.
+2. Add a Window Capture source.
+3. Select the window named `PopDroidCam Camera`.
+4. Fit the source to the canvas.
+5. Click Start Virtual Camera.
+6. Select `OBS Virtual Camera` in Teams, Zoom, Meet, or another calling app.
+
+Keep the scrcpy camera window open and not minimized. PopDroidCam can preview `OBS Virtual Camera` after camera permission is granted.
+
+### Windows Privacy And Firewall
+
+In Settings > Privacy & security > Camera, enable Camera access and Let desktop apps access your camera for OBS, PopDroidCam preview, and calling apps. USB ADB does not need an inbound firewall rule. For wireless debugging, allow ADB only on private networks when Windows Defender Firewall prompts; do not expose it on public networks.
+
+### End The Debugging Session
+
+Use Connect > End ADB session before disconnecting. This stops the PopDroidCam stream, disconnects wireless ADB, and shuts down the host ADB server. Then disable USB debugging on the phone before opening payment apps.
+
+The current Windows release still requires debugging while streaming. None of the currently targeted phones exposes Android's native USB Webcam mode. The planned no-debug implementation requires a signed Android app that streams over USB tethering; it is not included yet.
+
+## Linux Installation
 
 ### One-Line Install (Recommended)
 
@@ -435,7 +511,7 @@ After starting the stream, select **"PopDroidCam"** as your camera in:
 
 ## Building Desktop Releases
 
-Create distributable packages for Linux:
+Create distributable packages locally:
 
 ```bash
 # Build AppImage (portable, runs anywhere)
@@ -448,7 +524,14 @@ pnpm run dist:deb
 pnpm run dist:linux
 ```
 
+```powershell
+# Build the Windows 11 x64 NSIS installer
+pnpm run dist:win
+```
+
 Output files are created in the `release/` directory.
+
+Pushing a version tag matching `package.json`, such as `v1.0.0`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
 
 ## Project Structure
 
@@ -456,7 +539,7 @@ Output files are created in the `release/` directory.
 |----------------|-------------|
 | `popdroidcam` | Main CLI command (bash) |
 | `src/desktop/main.ts` | Desktop app main process (Electron) |
-| `src/desktop/preload.ts` | Electron preload script for IPC |
+| `src/desktop/preload.cts` | Electron preload script for IPC |
 | `src/desktop/renderer/` | Desktop app UI (HTML/CSS/JS) |
 | `src/gui/server.ts` | Web GUI server (Bun) |
 | `src/gui/index.html` | Web GUI interface |
@@ -468,7 +551,7 @@ Output files are created in the `release/` directory.
 
 ## State Files
 
-PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
+PopDroidCam stores runtime state in `~/.local/state/popdroidcam/` on Linux and `%LOCALAPPDATA%\PopDroidCam\` on Windows:
 
 | File | Purpose |
 |------|---------|
@@ -479,6 +562,8 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
 ## Troubleshooting
 
 ### "PopDroidCam" not showing in apps
+
+On Windows, confirm the `PopDroidCam Camera` window is present, its OBS Window Capture source is visible, and OBS Virtual Camera is started. On Linux, check the V4L2 stream below.
 
 1. Check stream is running:
    ```bash
@@ -507,6 +592,7 @@ PopDroidCam stores runtime state in `~/.local/state/popdroidcam/`:
    ```
 3. If "unauthorized", accept the prompt on your phone
 4. Try a different USB cable (some cables are charge-only)
+5. On Windows, install the phone manufacturer's ADB USB driver
 
 **WiFi:**
 1. Enable Wireless debugging (Settings → Developer Options → Wireless debugging)
@@ -597,9 +683,9 @@ For full virtual webcam functionality, a native Linux installation is recommende
                                          │
                                          ▼
                               ┌─────────────────────┐
-                              │    v4l2loopback     │
+                              │ v4l2loopback (Linux)│
+                              │ or OBS (Windows 11) │
                               │  (virtual webcam)   │
-                              │   /dev/videoN       │
                               └──────────┬──────────┘
                                          │
                     ┌────────────────────┼────────────────────┐
@@ -610,7 +696,7 @@ For full virtual webcam functionality, a native Linux installation is recommende
 ```
 
 1. **scrcpy 2.x** captures video from Android camera over USB/WiFi (no app needed on phone)
-2. **v4l2loopback** creates a virtual webcam device (`/dev/videoN`) named "PopDroidCam"
+2. **v4l2loopback** creates `PopDroidCam` on Linux; OBS Window Capture and OBS Virtual Camera provide Windows output
 3. **popdroidcam** manages the stream and provides CLI/TUI/Desktop/Web interfaces
 
 ## Uninstall

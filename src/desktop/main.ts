@@ -11,7 +11,9 @@ import {
   adbConnect,
   adbPair,
   adbDisconnect,
-  type StartStreamOptions,
+  adbKillServer,
+  getRuntimeInfo,
+  isStartStreamOptions,
 } from "../utils.js";
 
 // ESM polyfill for __dirname
@@ -30,12 +32,11 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: "PopDroidCam",
-    icon: join(__dirname, "../../assets/icon.png"),
     backgroundColor: "#09090b",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, "preload.js"),
+      preload: join(__dirname, "preload.cjs"),
     },
   });
 
@@ -57,8 +58,20 @@ function createWindow() {
 }
 
 function createTray() {
-  // Create a simple tray icon
-  const icon = nativeImage.createEmpty();
+  const size = 16;
+  const bitmap = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      const insideBody = x >= 2 && x <= 13 && y >= 4 && y <= 12;
+      const insideLens = (x - 8) ** 2 + (y - 8) ** 2 <= 9;
+      bitmap[index] = insideLens ? 24 : 94;
+      bitmap[index + 1] = insideLens ? 24 : 197;
+      bitmap[index + 2] = insideLens ? 24 : 34;
+      bitmap[index + 3] = insideBody ? 255 : 0;
+    }
+  }
+  const icon = nativeImage.createFromBitmap(bitmap, { width: size, height: size, scaleFactor: 1 });
   tray = new Tray(icon);
   
   const contextMenu = Menu.buildFromTemplate([
@@ -83,7 +96,7 @@ function createTray() {
           const cameras = getCameraSizes(devices[0].serial);
           const camIds = Object.keys(cameras);
           if (camIds.length > 0) {
-            startStream({
+            void startStream({
               cameraId: camIds[0],
               resolution: "1920x1080",
               fps: "30",
@@ -136,7 +149,10 @@ function setupIPC() {
     return { running: pid !== null, pid, config };
   });
 
-  ipcMain.handle("start-stream", (_event: Electron.IpcMainInvokeEvent, options: StartStreamOptions) => {
+  ipcMain.handle("get-runtime-info", () => getRuntimeInfo());
+
+  ipcMain.handle("start-stream", (_event: Electron.IpcMainInvokeEvent, options: unknown) => {
+    if (!isStartStreamOptions(options)) return { success: false, error: "Invalid stream options" };
     return startStream(options);
   });
 
@@ -154,6 +170,11 @@ function setupIPC() {
 
   ipcMain.handle("adb-disconnect", () => {
     adbDisconnect();
+    return true;
+  });
+
+  ipcMain.handle("adb-kill-server", () => {
+    adbKillServer();
     return true;
   });
 }
@@ -179,6 +200,5 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  // Stop stream before quitting
   stopStream();
 });

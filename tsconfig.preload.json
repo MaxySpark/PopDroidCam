@@ -12,6 +12,6 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["src/desktop/preload.ts"],
+  "include": ["src/desktop/preload.cts"],
   "exclude": ["node_modules"]
 }
