@@ -1,0 +1,105 @@
+LICENSE
+  s_de16e0f94ea6c6::t_3cb53e1dc450da 1-21
+scripts/build-desktop.mjs
+  s_de16e0f94ea6c6::t_de04ad9f4ea611 19-21
+  s_de16e0f94ea6c6::t_1647a6cff18364 6
+  s_de16e0f94ea6c6::t_8ce694cea1a651 1-5,7-18,22-23
+scripts/run-desktop.mjs
+  s_de16e0f94ea6c6::t_8ce694cea1a651 1-4,6-17
+  s_de16e0f94ea6c6::t_1647a6cff18364 5
+  s_de16e0f94ea6c6::t_de04ad9f4ea611 18-21
+src/desktop/preload.cts
+  s_de16e0f94ea6c6::t_a9665e7e0116c0 8,22,31-41,47-50,56
+tsconfig.electron.json
+  s_de16e0f94ea6c6::t_8ce694cea1a651 15
+scripts/prepare-scrcpy-win.mjs
+  s_de16e0f94ea6c6::t_1647a6cff18364 1-61
+  s_de16e0f94ea6c6::t_3df513e7d1f9b2 62-65
+src/desktop/main.ts
+  s_de16e0f94ea6c6::t_c91bb9c309df82 39
+  s_de16e0f94ea6c6::t_c66cadb4e2999f 14-15,61-74,99,152-153,176-178
+  s_de16e0f94ea6c6::t_6779939beda31b 16,154-155
+  s_de16e0f94ea6c6::t_306bd349954948 175
+  s_de16e0f94ea6c6::t_2dcb452190a202 179
+README.md
+  s_de16e0f94ea6c6::t_3cb53e1dc450da 3,5,28-40,66-67,100-148,153-159,535,554,566-567,595,686-687,699
+  s_de16e0f94ea6c6::t_19e0126b4469ec 149-152
+  s_de16e0f94ea6c6::t_2c2ab4448024fd 26-27,514,527-531,534,542
+package.json
+  s_de16e0f94ea6c6::t_3df513e7d1f9b2 97
+  s_de16e0f94ea6c6::t_8ce694cea1a651 5,12,14-15,19-21,27,30,77-78,81-96
+  s_de16e0f94ea6c6::t_19e0126b4469ec 55
+  s_de16e0f94ea6c6::t_c91bb9c309df82 17-18,79
+  s_de16e0f94ea6c6::t_3cb53e1dc450da 59-60
+  s_de16e0f94ea6c6::t_2c2ab4448024fd 4
+  s_de16e0f94ea6c6::t_6399cacd14e914 80
+pnpm-workspace.yaml
+  s_de16e0f94ea6c6::t_a9665e7e0116c0 2-3
+  s_de16e0f94ea6c6::t_715d13f97fc9ee 1
+tsconfig.preload.json
+  s_de16e0f94ea6c6::t_8ce694cea1a651 15
+src/gui/server.ts
+  s_de16e0f94ea6c6::t_935f435e493687 36-39,108-111,122-125
+  s_de16e0f94ea6c6::t_a9665e7e0116c0 40,92
+  s_de16e0f94ea6c6::t_6779939beda31b 14,88-91
+THIRD_PARTY_NOTICES.md
+  s_de16e0f94ea6c6::t_3cb53e1dc450da 1-4
+  s_de16e0f94ea6c6::t_3df513e7d1f9b2 5
+.github/workflows/release.yml
+  s_de16e0f94ea6c6::t_2c2ab4448024fd 1-8,10-20,24-101,104-115
+  s_de16e0f94ea6c6::t_7fac031eed3922 21-23
+  s_de16e0f94ea6c6::t_fdcdc001a3dc60 9,102-103
+tests/utils.test.ts
+  s_de16e0f94ea6c6::t_1647a6cff18364 1-5,7,11,13-52,69-113,145
+  s_de16e0f94ea6c6::t_6779939beda31b 8,114-119
+  s_de16e0f94ea6c6::t_3bbc366afb48e5 9-10,132-141,143-144
+  s_de16e0f94ea6c6::t_3df513e7d1f9b2 6,120-131
+  s_de16e0f94ea6c6::t_87e5792fdc31e3 61
+  s_de16e0f94ea6c6::t_77cec4bf3c1f44 142
+  s_de16e0f94ea6c6::t_10e06a9e5335a3 12,53-60,62-68
+setup.sh
+  s_de16e0f94ea6c6::t_1647a6cff18364 45-46,59-60,63-67
+src/desktop/renderer/index.html
+  s_de16e0f94ea6c6::t_8990438d4d54cc 236
+  s_de16e0f94ea6c6::t_c66cadb4e2999f 213-227,260-267,380-381,395,444-449,524-526,528,648-651,755-778,780
+  s_de16e0f94ea6c6::t_19e0126b4469ec 532-535
+  s_de16e0f94ea6c6::t_a182f3878ab2e8 527
+src/utils.ts
+  s_de16e0f94ea6c6::t_10e06a9e5335a3 386,388-396,398-405,407-410
+  s_de16e0f94ea6c6::t_de04ad9f4ea611 116,119-120,124-126,137,141,144-145
+  s_de16e0f94ea6c6::t_3df513e7d1f9b2 109,174,223-226,245,376,378,543-560,574,588,591,596,598-600,602-605,607-613,626,643-645,647-656
+  s_de16e0f94ea6c6::t_77cec4bf3c1f44 511
+  s_de16e0f94ea6c6::t_0f97c610cd0061 1-12,16,27,29-31,37-40,62-108,110-115,117-118,121-123,127-136,138-140,142-143,146-149,155,178-187,190,196,198-205,213-222,227-228,235-239,246-249,269-271,273-279,281,287-316,320,322,325-331,338-343,361-375,383-385,387,416,418-424,430,432-437,439,445,448-449,452-460,463,469-470,473-483,486-488,490-492,494-498,501-502,504,507,514-515,517-518,521-524,526-527,536-542,561-568,576-587,589,592-594,597,625,627-642,646,663,665-668,670-675,677-679,681-682
+  s_de16e0f94ea6c6::t_87e5792fdc31e3 397
+  s_de16e0f94ea6c6::t_1647a6cff18364 206-209,211-212,229-234,344-353,358-360,377,569-573
+  s_de16e0f94ea6c6::t_3bbc366afb48e5 240-244,252-264,508-510,512-513,516,520,525,528-535,614-624
+  s_de16e0f94ea6c6::t_6779939beda31b 150-154,156-173
+  s_de16e0f94ea6c6::t_c91bb9c309df82 13
+  s_de16e0f94ea6c6::t_a9665e7e0116c0 519
+  s_de16e0f94ea6c6::t_e5f05f70263b8f 175
+  s_de16e0f94ea6c6::t_b0e466f8080d7e 379
+  s_de16e0f94ea6c6::t_a6a23c9cd9ff26 575
+src/App.tsx
+  s_de16e0f94ea6c6::t_a9665e7e0116c0 177,188,205
+  s_de16e0f94ea6c6::t_935f435e493687 265,362,364,366,368
+.github/workflows/ci.yml
+  s_de16e0f94ea6c6::t_2c2ab4448024fd 1-49
+.gitignore
+  s_de16e0f94ea6c6::t_1647a6cff18364 98-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "3b05fa5ce60f81574ce5d6434da51b24ca59bded",
+  "prompts": {},
+  "sessions": {
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
