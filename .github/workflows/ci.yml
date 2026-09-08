@@ -42,6 +42,10 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Check Linux installer syntax
+        if: runner.os == 'Linux'
+        run: bash -n install.sh setup.sh
+
       - name: Typecheck
         run: pnpm run typecheck
 

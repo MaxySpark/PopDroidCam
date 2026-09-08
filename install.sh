@@ -10,7 +10,11 @@ echo ""
 # Check if git is installed
 if ! command -v git &> /dev/null; then
     echo "Error: git is not installed. Please install git first:"
-    echo "  sudo apt install git"
+    if [ -f /etc/arch-release ]; then
+        echo "  sudo pacman -S git"
+    else
+        echo "  sudo apt install git"
+    fi
     exit 1
 fi
 

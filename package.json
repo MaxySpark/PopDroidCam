@@ -1,6 +1,6 @@
 {
   "name": "popdroidcam",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "packageManager": "pnpm@11.0.9",
   "description": "Turn your Android phone into a high-quality webcam for Linux and Windows",
   "type": "module",

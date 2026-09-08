@@ -36,7 +36,7 @@ pnpm run dist:win
 
 Install the generated `.exe` from `release/`, connect the phone with USB debugging enabled, and complete the one-time OBS setup in [Windows Installation](#windows-installation).
 
-### Linux
+### Linux (Arch, Debian, Ubuntu, Pop!_OS)
 
 ```bash
 # One-line install
@@ -59,7 +59,7 @@ popdroidcam start
 
 | Requirement | Details |
 |-------------|---------|
-| **OS** | Linux (tested on Pop!_OS 22.04, Ubuntu 22.04+, Debian 12+) |
+| **OS** | Arch Linux, Pop!_OS 22.04, Ubuntu 22.04+, or Debian 12+ |
 | **Kernel** | v4l2loopback support (most modern kernels) |
 | **Architecture** | x86_64 (amd64) |
 
@@ -74,7 +74,7 @@ The Windows desktop release requires Windows 11 x64 and OBS Studio. Windows 10, 
 | **USB Debugging** | Required for USB connection |
 | **Wireless Debugging** | Required for WiFi connection (Android 11+) |
 
-### Dependencies (installed by setup.sh)
+### Dependencies (installed by `setup.sh`)
 
 | Package | Purpose |
 |---------|---------|
@@ -86,7 +86,7 @@ The Windows desktop release requires Windows 11 x64 and OBS Studio. Windows 10, 
 | **pnpm** | Package manager |
 | **Electron** | Desktop app framework |
 
-> **Note**: Ubuntu/Pop!_OS ship scrcpy 1.x which lacks camera support. The setup script automatically builds scrcpy 2.x from source.
+> **Note**: Arch Linux installs scrcpy 4.1 from the official repository. On Debian-based systems, the setup script builds scrcpy 4.1 from source because older repository versions lack camera support.
 
 ## Tested Devices
 
@@ -164,6 +164,8 @@ The current Windows release still requires debugging while streaming. None of th
 curl -fsSL https://raw.githubusercontent.com/MaxySpark/PopDroidCam/main/install.sh | bash
 ```
 
+The installer detects Arch Linux and Debian-based distributions automatically. On Arch, it installs official repository packages with `pacman`, including scrcpy, Bun, pnpm, `v4l2loopback-dkms`, and the headers for standard Arch kernels.
+
 This will:
 1. Clone the repository to `~/.local/popdroidcam`
 2. Run the full setup automatically
@@ -193,6 +195,19 @@ After setup, restart your terminal or run `source ~/.bashrc`.
 ### Manual Prerequisites
 
 If you prefer manual installation or setup.sh fails:
+
+**Arch Linux:**
+
+```bash
+sudo pacman -Syu --needed \
+    android-tools bun curl ffmpeg git nodejs pnpm scrcpy unzip \
+    v4l2loopback-dkms v4l2loopback-utils linux-headers
+sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
+```
+
+Replace `linux-headers` with `linux-lts-headers`, `linux-zen-headers`, or `linux-hardened-headers` when using that kernel. Reboot first if `pacman -Syu` upgrades the running kernel.
+
+**Debian, Ubuntu, or Pop!_OS:**
 
 ```bash
 # Install system packages
@@ -531,7 +546,7 @@ pnpm run dist:win
 
 Output files are created in the `release/` directory.
 
-Pushing a version tag matching `package.json`, such as `v1.1.1`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
+Pushing a version tag matching `package.json`, such as `v1.1.2`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
 
 ## Project Structure
 
