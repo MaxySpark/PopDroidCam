@@ -1,0 +1,28 @@
+install.sh
+  s_de16e0f94ea6c6::t_1bf93cd29627b6 13-16
+  s_de16e0f94ea6c6::t_959bf76eeeb720 17
+.github/workflows/ci.yml
+  s_de16e0f94ea6c6::t_8bcad5ca4cd7b4 45-48
+README.md
+  s_de16e0f94ea6c6::t_1bf93cd29627b6 39,62,77,89,167-168,199-211,549
+setup.sh
+  s_de16e0f94ea6c6::t_1bf93cd29627b6 10-50,75-109,126-129
+package.json
+  s_de16e0f94ea6c6::t_1bf93cd29627b6 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "18af4b93d64ce7719dd798dbe4dae91f60ad6c80",
+  "prompts": {},
+  "sessions": {
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
