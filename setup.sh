@@ -7,16 +7,47 @@ cd "$SCRIPT_DIR"
 echo "=== PopDroidCam Setup ==="
 echo ""
 
-echo ">>> Updating package lists..."
-sudo apt update
+BUILD_SCRCPY=true
 
-echo ">>> Installing build dependencies and v4l2loopback..."
-sudo apt install -y \
-    ffmpeg libsdl2-2.0-0 adb wget gcc git pkg-config meson ninja-build \
-    libsdl2-dev libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
-    libswresample-dev libusb-1.0-0 libusb-1.0-0-dev \
-    v4l2loopback-dkms v4l2loopback-utils \
-    curl unzip
+if [ -f /etc/arch-release ]; then
+    BUILD_SCRCPY=false
+    ARCH_PACKAGES=(
+        android-tools bun curl ffmpeg git nodejs pnpm scrcpy unzip
+        v4l2loopback-dkms v4l2loopback-utils
+    )
+
+    if [ ! -e "/usr/lib/modules/$(uname -r)/build" ]; then
+        case "$(uname -r)" in
+            *-arch*) ARCH_PACKAGES+=(linux-headers) ;;
+            *-lts*) ARCH_PACKAGES+=(linux-lts-headers) ;;
+            *-zen*) ARCH_PACKAGES+=(linux-zen-headers) ;;
+            *-hardened*) ARCH_PACKAGES+=(linux-hardened-headers) ;;
+            *)
+                echo "ERROR: Cannot determine the headers package for kernel $(uname -r)."
+                echo "Install its matching kernel headers, then run this script again."
+                exit 1
+                ;;
+        esac
+    fi
+
+    echo ">>> Updating Arch Linux and installing dependencies..."
+    sudo pacman -Syu --needed --noconfirm "${ARCH_PACKAGES[@]}"
+elif command -v apt-get &> /dev/null; then
+    echo ">>> Updating package lists..."
+    sudo apt-get update
+
+    echo ">>> Installing build dependencies and v4l2loopback..."
+    sudo apt-get install -y \
+        ffmpeg libsdl2-2.0-0 adb wget gcc git pkg-config meson ninja-build \
+        libsdl2-dev libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
+        libswresample-dev libusb-1.0-0 libusb-1.0-0-dev \
+        v4l2loopback-dkms v4l2loopback-utils \
+        curl unzip
+else
+    echo "ERROR: Unsupported Linux distribution."
+    echo "This setup script supports Arch Linux, Debian, Ubuntu, and Pop!_OS."
+    exit 1
+fi
 
 echo ">>> Installing Bun..."
 if ! command -v bun &> /dev/null; then
@@ -41,40 +72,42 @@ node node_modules/electron/install.js
 echo ">>> Building desktop app..."
 pnpm run desktop:build
 
-echo ">>> Setting up build directory..."
-SCRCPY_VERSION="v4.1"
-SCRCPY_SERVER_SHA256="deacb991ed2509715160ffdc7907e47b4160eb30d1566217e9047fd5b8850cae"
-mkdir -p build_scrcpy
-cd build_scrcpy
+if [ "$BUILD_SCRCPY" = true ]; then
+    echo ">>> Setting up build directory..."
+    SCRCPY_VERSION="v4.1"
+    SCRCPY_SERVER_SHA256="deacb991ed2509715160ffdc7907e47b4160eb30d1566217e9047fd5b8850cae"
+    mkdir -p build_scrcpy
+    cd build_scrcpy
 
-if [ ! -d "scrcpy" ]; then
-    echo ">>> Cloning scrcpy..."
-    git clone https://github.com/Genymobile/scrcpy
-    cd scrcpy
-else
-    cd scrcpy
-    git fetch --tags
+    if [ ! -d "scrcpy" ]; then
+        echo ">>> Cloning scrcpy..."
+        git clone https://github.com/Genymobile/scrcpy
+        cd scrcpy
+    else
+        cd scrcpy
+        git fetch --tags
+    fi
+
+    echo ">>> Checking out scrcpy $SCRCPY_VERSION"
+    git checkout "$SCRCPY_VERSION"
+
+    echo ">>> Downloading prebuilt server..."
+    wget -O scrcpy-server "https://github.com/Genymobile/scrcpy/releases/download/${SCRCPY_VERSION}/scrcpy-server-${SCRCPY_VERSION}"
+    echo "$SCRCPY_SERVER_SHA256  scrcpy-server" | sha256sum --check --status || {
+        echo "ERROR: scrcpy server checksum verification failed"
+        exit 1
+    }
+
+    echo ">>> Building scrcpy client..."
+    meson setup x --buildtype=release --strip -Db_lto=true -Dprebuilt_server=scrcpy-server --wipe 2>/dev/null || \
+        meson setup x --buildtype=release --strip -Db_lto=true -Dprebuilt_server=scrcpy-server
+    ninja -C x
+
+    echo ">>> Installing scrcpy..."
+    sudo ninja -C x install
+
+    cd "$SCRIPT_DIR"
 fi
-
-echo ">>> Checking out scrcpy $SCRCPY_VERSION"
-git checkout "$SCRCPY_VERSION"
-
-echo ">>> Downloading prebuilt server..."
-wget -O scrcpy-server "https://github.com/Genymobile/scrcpy/releases/download/${SCRCPY_VERSION}/scrcpy-server-${SCRCPY_VERSION}"
-echo "$SCRCPY_SERVER_SHA256  scrcpy-server" | sha256sum --check --status || {
-    echo "ERROR: scrcpy server checksum verification failed"
-    exit 1
-}
-
-echo ">>> Building scrcpy client..."
-meson setup x --buildtype=release --strip -Db_lto=true -Dprebuilt_server=scrcpy-server --wipe 2>/dev/null || \
-    meson setup x --buildtype=release --strip -Db_lto=true -Dprebuilt_server=scrcpy-server
-ninja -C x
-
-echo ">>> Installing scrcpy..."
-sudo ninja -C x install
-
-cd "$SCRIPT_DIR"
 
 echo ">>> Installing popdroidcam command..."
 mkdir -p "$HOME/.local/bin"
@@ -90,7 +123,10 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 fi
 
 echo ">>> Loading v4l2loopback module..."
-sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1 || true
+if ! sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1; then
+    echo "WARNING: v4l2loopback could not be loaded."
+    echo "If the kernel was just updated, reboot and run this setup again."
+fi
 
 echo ">>> Verifying installation..."
 scrcpy --version
