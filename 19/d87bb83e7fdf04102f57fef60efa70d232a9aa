@@ -1,0 +1,22 @@
+README.md
+  s_de16e0f94ea6c6::t_e0678441e4a397 116,229,250
+  s_de16e0f94ea6c6::t_e3c8f3da227790 97,107-115,143,293
+  s_de16e0f94ea6c6::t_032dee3988faae 166-170,172
+  s_de16e0f94ea6c6::t_24a3c262e2be69 24,26,28-33,35-37,39-43,45-49,53,55-59,61-67,69-84,86,88-94,98-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "19d87bb83e7fdf04102f57fef60efa70d232a9aa",
+  "prompts": {},
+  "sessions": {
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
