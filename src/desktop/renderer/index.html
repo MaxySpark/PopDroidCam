@@ -210,6 +210,21 @@
       color: var(--text-muted);
       margin-top: 4px;
     }
+    .output-guide {
+      display: none;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(250, 250, 250, 0.12);
+      border-radius: 8px;
+      background: rgba(250, 250, 250, 0.04);
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .output-guide.visible { display: block; }
+    .output-guide strong { color: var(--text); font-weight: 500; }
+    .output-steps { padding-left: 20px; margin-top: 8px; }
+    .output-steps li + li { margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -218,7 +233,7 @@
       <video id="previewVideo" class="preview-video" autoplay playsinline muted></video>
       <div class="preview-overlay" id="previewOverlay">
         <div class="preview-icon">📹</div>
-        <div class="preview-text">Camera preview will appear here when streaming</div>
+        <div class="preview-text" id="previewText">Camera preview will appear here when streaming</div>
         <button class="preview-btn" id="enablePreviewBtn" onclick="requestCameraAccess()">Enable Preview</button>
         <button class="preview-btn" id="refreshPreviewBtn" onclick="retryPreview()" style="margin-top:8px;">🔄 Refresh Preview</button>
       </div>
@@ -242,6 +257,14 @@
 
       <div class="panel-container">
         <div class="panel active" id="camera-panel">
+          <div class="output-guide" id="windowsOutputGuide">
+            <strong>Windows output uses OBS Virtual Camera.</strong>
+            <ol class="output-steps">
+              <li>Add a Window Capture source for “PopDroidCam Camera”.</li>
+              <li>Start OBS Virtual Camera.</li>
+              <li>Select “OBS Virtual Camera” in your call.</li>
+            </ol>
+          </div>
           <div class="field">
             <label class="field-label">Device</label>
             <div class="field-row">
@@ -354,6 +377,8 @@
             <button class="btn btn-ghost" id="disconnectBtn" onclick="disconnectDevices()">Disconnect All</button>
           </div>
 
+          <button class="btn btn-ghost" id="endDebuggingBtn" onclick="endDebuggingSession()">End ADB session</button>
+
           <div class="message" id="connectMessage"></div>
         </div>
       </div>
@@ -367,6 +392,7 @@
     let currentStatus = { running: false };
     let previewStream = null;
     let cameraPermission = false;
+    let runtimeInfo = null;
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -415,13 +441,12 @@
       if (previewRetryTimer) { clearTimeout(previewRetryTimer); previewRetryTimer = null; }
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const cam = devices.find(d => 
-          d.kind === 'videoinput' && d.label && 
-          (d.label.toLowerCase().includes('popdroidcam') ||
-           d.label.toLowerCase().includes('android') || 
-           d.label.toLowerCase().includes('v4l2') ||
-           d.label.toLowerCase().includes('virtual'))
-        );
+        const cam = devices.find(d => {
+          if (d.kind !== 'videoinput' || !d.label) return false;
+          const label = d.label.toLowerCase();
+          if (runtimeInfo?.output === 'obs') return label.includes('obs virtual camera');
+          return label.includes('popdroidcam') || label.includes('android') || label.includes('v4l2');
+        });
         if (cam) {
           previewStream = await navigator.mediaDevices.getUserMedia({
             video: { deviceId: { exact: cam.deviceId } }
@@ -496,10 +521,18 @@
       sel.innerHTML = '<option value="">Loading...</option>';
       sel.disabled = true;
       try {
+        if (runtimeInfo && !runtimeInfo.dependencies.adb.available) {
+          sel.innerHTML = '<option value="">ADB not installed</option>';
+          showMessage('cameraMessage', `ADB not found: ${runtimeInfo.dependencies.adb.executable}`, true);
+          return;
+        }
         const devices = await api.getDevices();
         sel.innerHTML = '<option value="">Select device...</option>';
         if (!devices.length) {
-          sel.innerHTML = '<option value="">No devices</option>';
+          sel.innerHTML = '<option value="">No authorized devices</option>';
+          if (runtimeInfo?.platform === 'win32') {
+            showMessage('cameraMessage', 'No phone found. Unlock it, approve USB debugging, or install its OEM ADB driver.', true);
+          }
           return;
         }
         devices.forEach(d => {
@@ -612,7 +645,10 @@
       try {
         const res = await api.startStream({ cameraId, resolution, fps, serial, rotation, quality, mirror, zoom });
         if (res.success) {
-          showMessage('cameraMessage', 'Stream started');
+          const message = runtimeInfo?.output === 'obs'
+            ? 'Camera window started. Start OBS Virtual Camera.'
+            : 'Stream started';
+          showMessage('cameraMessage', message);
           refreshStatus();
         } else {
           showMessage('cameraMessage', res.error || 'Failed', true);
@@ -716,9 +752,32 @@
       }
     }
 
+    async function endDebuggingSession() {
+      if (currentStatus.running) await stopStream();
+      await api.adbDisconnect();
+      await api.adbKillServer();
+      showMessage('connectMessage', 'ADB stopped. You can now disable USB debugging on the phone.');
+      refreshDevices();
+    }
+
+    async function initialize() {
+      runtimeInfo = await api.getRuntimeInfo();
+      if (runtimeInfo.output === 'obs') {
+        document.getElementById('windowsOutputGuide').classList.add('visible');
+        document.getElementById('qualitySelect').value = 'medium';
+        document.getElementById('previewText').textContent = 'Start OBS Virtual Camera to preview the Windows webcam output here.';
+        if (!runtimeInfo.dependencies.scrcpy.available) {
+          showMessage('cameraMessage', `scrcpy not found: ${runtimeInfo.dependencies.scrcpy.executable}`, true);
+        } else if (runtimeInfo.obsInstalled === false) {
+          showMessage('cameraMessage', 'OBS Studio was not found in a standard install location.', true);
+        }
+      }
+      await refreshStatus();
+      await refreshDevices();
+    }
+
     // Initialize
-    refreshStatus();
-    refreshDevices();
+    initialize();
     setInterval(refreshStatus, 2000);
   </script>
 </body>

@@ -11,7 +11,7 @@ import {
   adbConnect,
   adbPair,
   adbDisconnect,
-  type StartStreamOptions,
+  isStartStreamOptions,
 } from "../utils";
 
 const PORT = 3847;
@@ -31,6 +31,11 @@ function htmlResponse(content: string): Response {
   return new Response(content, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
+}
+
+function hasStringFields(value: unknown, fields: string[]): value is Record<string, string> {
+  if (typeof value !== "object" || value === null) return false;
+  return fields.every((field) => typeof Reflect.get(value, field) === "string");
 }
 
 async function handleRequest(req: Request): Promise<Response> {
@@ -80,8 +85,11 @@ async function handleRequest(req: Request): Promise<Response> {
     // POST /api/start - Start stream
     if (apiPath === "/start" && method === "POST") {
       try {
-        const body = await req.json() as StartStreamOptions;
-        const result = startStream(body);
+        const body: unknown = await req.json();
+        if (!isStartStreamOptions(body)) {
+          return jsonResponse({ success: false, error: "Invalid stream options" }, 400);
+        }
+        const result = await startStream(body);
         return jsonResponse(result, result.success ? 200 : 400);
       } catch (e) {
         return jsonResponse({ success: false, error: String(e) }, 400);
@@ -97,7 +105,10 @@ async function handleRequest(req: Request): Promise<Response> {
     // POST /api/connect - Connect to device over WiFi
     if (apiPath === "/connect" && method === "POST") {
       try {
-        const body = await req.json() as { ip: string; port: string };
+        const body: unknown = await req.json();
+        if (!hasStringFields(body, ["ip", "port"])) {
+          return jsonResponse({ success: false, error: "Invalid connection details" }, 400);
+        }
         const success = adbConnect(body.ip, body.port);
         return jsonResponse({ success });
       } catch (e) {
@@ -108,7 +119,10 @@ async function handleRequest(req: Request): Promise<Response> {
     // POST /api/pair - Pair with device
     if (apiPath === "/pair" && method === "POST") {
       try {
-        const body = await req.json() as { ip: string; port: string; code: string };
+        const body: unknown = await req.json();
+        if (!hasStringFields(body, ["ip", "port", "code"])) {
+          return jsonResponse({ success: false, error: "Invalid pairing details" }, 400);
+        }
         const success = adbPair(body.ip, body.port, body.code);
         return jsonResponse({ success });
       } catch (e) {

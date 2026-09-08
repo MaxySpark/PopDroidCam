@@ -42,6 +42,8 @@ echo ">>> Building desktop app..."
 pnpm run desktop:build
 
 echo ">>> Setting up build directory..."
+SCRCPY_VERSION="v4.1"
+SCRCPY_SERVER_SHA256="deacb991ed2509715160ffdc7907e47b4160eb30d1566217e9047fd5b8850cae"
 mkdir -p build_scrcpy
 cd build_scrcpy
 
@@ -54,12 +56,15 @@ else
     git fetch --tags
 fi
 
-LATEST_TAG=$(git describe --tags --abbrev=0)
-echo ">>> Checking out latest version: $LATEST_TAG"
-git checkout $LATEST_TAG
+echo ">>> Checking out scrcpy $SCRCPY_VERSION"
+git checkout "$SCRCPY_VERSION"
 
 echo ">>> Downloading prebuilt server..."
-wget -O scrcpy-server "https://github.com/Genymobile/scrcpy/releases/download/${LATEST_TAG}/scrcpy-server-${LATEST_TAG}"
+wget -O scrcpy-server "https://github.com/Genymobile/scrcpy/releases/download/${SCRCPY_VERSION}/scrcpy-server-${SCRCPY_VERSION}"
+echo "$SCRCPY_SERVER_SHA256  scrcpy-server" | sha256sum --check --status || {
+    echo "ERROR: scrcpy server checksum verification failed"
+    exit 1
+}
 
 echo ">>> Building scrcpy client..."
 meson setup x --buildtype=release --strip -Db_lto=true -Dprebuilt_server=scrcpy-server --wipe 2>/dev/null || \
