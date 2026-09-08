@@ -531,7 +531,7 @@ pnpm run dist:win
 
 Output files are created in the `release/` directory.
 
-Pushing a version tag matching `package.json`, such as `v1.0.0`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
+Pushing a version tag matching `package.json`, such as `v1.1.0`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
 
 ## Project Structure
 
