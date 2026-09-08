@@ -1,6 +1,6 @@
 {
   "name": "popdroidcam",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "packageManager": "pnpm@11.0.9",
   "description": "Turn your Android phone into a high-quality webcam for Linux and Windows",
   "type": "module",
@@ -14,11 +14,11 @@
     "desktop:build": "node scripts/build-desktop.mjs",
     "desktop:dev": "node scripts/run-desktop.mjs",
     "desktop": "electron dist/desktop/main.js",
-    "dist:linux": "pnpm run desktop:build && electron-builder --linux",
-    "dist:deb": "pnpm run desktop:build && electron-builder --linux deb",
-    "dist:appimage": "pnpm run desktop:build && electron-builder --linux AppImage",
+    "dist:linux": "pnpm run desktop:build && electron-builder --linux --publish never",
+    "dist:deb": "pnpm run desktop:build && electron-builder --linux deb --publish never",
+    "dist:appimage": "pnpm run desktop:build && electron-builder --linux AppImage --publish never",
     "prepare:scrcpy:win": "node scripts/prepare-scrcpy-win.mjs",
-    "dist:win": "pnpm run prepare:scrcpy:win && pnpm run desktop:build && electron-builder --win nsis --x64"
+    "dist:win": "pnpm run prepare:scrcpy:win && pnpm run desktop:build && electron-builder --win nsis --x64 --publish never"
   },
   "keywords": [
     "webcam",
