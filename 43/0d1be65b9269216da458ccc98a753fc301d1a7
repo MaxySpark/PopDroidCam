@@ -1,0 +1,21 @@
+package.json
+  s_de16e0f94ea6c6::t_0891ffb45a2668 3,17-19,21
+README.md
+  s_de16e0f94ea6c6::t_0891ffb45a2668 534
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "430d1be65b9269216da458ccc98a753fc301d1a7",
+  "prompts": {},
+  "sessions": {
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
