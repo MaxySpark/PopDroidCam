@@ -1,0 +1,55 @@
+scripts/check-windows-installer.ps1
+  s_de16e0f94ea6c6::t_c265f2a523a73b 5-6
+  s_de16e0f94ea6c6::t_189253478e50a3 1-4,7-18,21-35
+  s_de16e0f94ea6c6::t_4a083694fa1c1e 19-20
+popdroidcam
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 526
+setup.sh
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 15-16,72
+src/utils.ts
+  s_de16e0f94ea6c6::t_c23557186eb992 236-238,243,247,250-256,258-266
+  s_de16e0f94ea6c6::t_189253478e50a3 572-573
+  s_de16e0f94ea6c6::t_3fa8f83a8c5233 270
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 522-525,545-550,609,625
+scripts/installer.nsh
+  s_de16e0f94ea6c6::t_979dc4a1b8704f 1-12
+src/desktop/renderer/index.html
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 590
+src/gui/index.html
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 560
+README.md
+  s_de16e0f94ea6c6::t_189253478e50a3 45,79-80,612
+.github/workflows/release.yml
+  s_de16e0f94ea6c6::t_189253478e50a3 51-53
+  s_de16e0f94ea6c6::t_2d106467fd7959 54
+tsconfig.electron.json
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 15
+tests/utils.test.ts
+  s_de16e0f94ea6c6::t_59bde58e686c07 14,149-152
+  s_de16e0f94ea6c6::t_189253478e50a3 137,153-160
+  s_de16e0f94ea6c6::t_48ee332929460a 148
+tests/installers.test.ts
+  s_de16e0f94ea6c6::t_59bde58e686c07 1-20,22-23
+  s_de16e0f94ea6c6::t_979dc4a1b8704f 21
+package.json
+  s_de16e0f94ea6c6::t_189253478e50a3 3
+  s_de16e0f94ea6c6::t_979dc4a1b8704f 94
+src/cli.ts
+  s_de16e0f94ea6c6::t_e4e5448462c1f4 1-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c0cccc8f0cae79f5e34fb31bf61d6583b791a606",
+  "prompts": {},
+  "sessions": {
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
