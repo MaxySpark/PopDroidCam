@@ -11,6 +11,7 @@ import {
   parseAdbDevices,
   parseCameraSizes,
   resolveExecutable,
+  shouldAcceptStartupTimeout,
 } from "../src/utils.ts";
 
 test("uses LocalAppData for Windows state", () => {
@@ -133,6 +134,7 @@ test("classifies actionable scrcpy startup failures", () => {
 
 test("recognizes owned Linux scrcpy camera processes", () => {
   assert.equal(isScrcpyCommandLine("/usr/local/bin/scrcpy --video-source=camera --no-window"), true);
+  assert.equal(isScrcpyCommandLine('"C:\\Program Files\\PopDroidCam\\resources\\bin\\scrcpy.exe" --video-source=camera'), true);
   assert.equal(isScrcpyCommandLine("/usr/bin/other --video-source=camera"), false);
   assert.equal(isScrcpyCommandLine("/usr/local/bin/scrcpy --video-source=display"), false);
 });
@@ -142,4 +144,17 @@ test("requires platform-specific scrcpy readiness markers", () => {
   assert.equal(isStartupReadyLog("INFO: Renderer: direct3d", "win32"), false);
   assert.equal(isStartupReadyLog("INFO: V4L2 sink started to device: /dev/video9", "linux"), true);
   assert.equal(isStartupReadyLog("INFO: Device connected", "win32"), false);
+});
+
+test("accepts a live scrcpy process when its readiness log is delayed", () => {
+  assert.equal(shouldAcceptStartupTimeout(null, false), true);
+  assert.equal(shouldAcceptStartupTimeout(1, false), false);
+  assert.equal(shouldAcceptStartupTimeout(null, true), false);
+});
+
+test("includes an unknown scrcpy error in the startup response", () => {
+  assert.equal(
+    describeStartupFailure("INFO: connected\nERROR: Failed to open output device\n", "startup failed"),
+    "startup failed: ERROR: Failed to open output device",
+  );
 });

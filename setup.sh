@@ -12,7 +12,8 @@ BUILD_SCRCPY=true
 if [ -f /etc/arch-release ]; then
     BUILD_SCRCPY=false
     ARCH_PACKAGES=(
-        android-tools bun curl ffmpeg git nodejs pnpm scrcpy unzip
+        alsa-lib android-tools bun curl ffmpeg git gtk3 libnotify libsecret
+        libxss libxtst nodejs nss pnpm scrcpy unzip xdg-utils
         v4l2loopback-dkms v4l2loopback-utils
     )
 
@@ -68,6 +69,7 @@ pnpm install
 
 echo ">>> Setting up Electron..."
 node node_modules/electron/install.js
+pnpm exec electron --version
 
 echo ">>> Building desktop app..."
 pnpm run desktop:build

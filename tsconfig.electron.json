@@ -12,6 +12,6 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["src/desktop/main.ts", "src/utils.ts"],
+  "include": ["src/cli.ts", "src/desktop/main.ts", "src/utils.ts"],
   "exclude": ["node_modules"]
 }

@@ -48,6 +48,10 @@ jobs:
       - name: Build Windows release
         run: pnpm run dist:win
 
+      - name: Test Windows installer CLI
+        shell: pwsh
+        run: ./scripts/check-windows-installer.ps1
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
