@@ -220,10 +220,6 @@ export function isRunning(): number | null {
   }
 
   const paths = getStatePaths();
-  if (process.platform === "win32") {
-    removeFile(paths.pid);
-    return null;
-  }
   if (!existsSync(paths.pid)) return null;
 
   let pid: number;
@@ -237,31 +233,41 @@ export function isRunning(): number | null {
     return null;
   }
 
-  if (!isScrcpyCommandLine(readLinuxCommandLine(pid))) {
-    removeFile(paths.pid);
-    return null;
-  }
-
   try {
     process.kill(pid, 0);
-    return pid;
   } catch {
     removeFile(paths.pid);
     return null;
   }
+
+  if (!isScrcpyCommandLine(readProcessCommandLine(pid))) {
+    removeFile(paths.pid);
+    return null;
+  }
+  return pid;
 }
 
-function readLinuxCommandLine(pid: number): string {
-  if (process.platform !== "linux") return "";
-  try {
-    return readFileSync(`/proc/${pid}/cmdline`, "utf-8").replace(/\0/g, " ");
-  } catch {
-    return "";
+function readProcessCommandLine(pid: number): string {
+  if (process.platform === "linux") {
+    try {
+      return readFileSync(`/proc/${pid}/cmdline`, "utf-8").replace(/\0/g, " ");
+    } catch {
+      return "";
+    }
   }
+
+  if (process.platform !== "win32") return "";
+  const command = `(Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}").CommandLine`;
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
+    encoding: "utf-8",
+    timeout: 5000,
+    windowsHide: true,
+  });
+  return result.status === 0 ? result.stdout.trim() : "";
 }
 
 export function isScrcpyCommandLine(commandLine: string): boolean {
-  return /(^|[/\\\s])scrcpy(\s|$)/.test(commandLine) && commandLine.includes("--video-source=camera");
+  return /(^|[/\\\s])scrcpy(?:\.exe)?(?=["\s]|$)/i.test(commandLine) && commandLine.includes("--video-source=camera");
 }
 
 export function getCurrentConfig(): Config {
@@ -513,6 +519,10 @@ export function isStartupReadyLog(log: string, platform: NodeJS.Platform): boole
   return false;
 }
 
+export function shouldAcceptStartupTimeout(exitCode: number | null, killed: boolean): boolean {
+  return exitCode === null && !killed;
+}
+
 function waitForStartup(child: ChildProcess, logPath: string, timeoutMs: number): Promise<string | null> {
   return new Promise((resolve) => {
     let settled = false;
@@ -532,7 +542,12 @@ function waitForStartup(child: ChildProcess, logPath: string, timeoutMs: number)
         // The log may not be readable until scrcpy initializes it.
       }
     }, 100);
-    timer = setTimeout(() => finish("scrcpy did not become ready. Check the log for details."), timeoutMs);
+    timer = setTimeout(() => {
+      const error = shouldAcceptStartupTimeout(child.exitCode, child.killed)
+        ? null
+        : "scrcpy stopped before startup completed. Check the log for details.";
+      finish(error);
+    }, timeoutMs);
     child.once("error", (error) => finish(`Could not start scrcpy: ${error.message}`));
     child.once("exit", (code, signal) => {
       finish(`scrcpy exited during startup (${signal || `code ${code ?? "unknown"}`}). Check the log for details.`);
@@ -554,6 +569,8 @@ export function describeStartupFailure(log: string, fallback: string): string {
   if (normalized.includes("encoder") && (normalized.includes("failed") || normalized.includes("error"))) {
     return "The phone could not start its video encoder. Try 1280x720 at 30 fps.";
   }
+  const detail = log.split(/\r?\n/).reverse().find((line) => /error|failed|fatal|permission denied/i.test(line));
+  if (detail) return `${fallback}: ${detail.trim().slice(0, 300)}`;
   return fallback;
 }
 
@@ -589,7 +606,7 @@ async function startStreamOnce(options: StartStreamOptions): Promise<StartStream
 
   try {
     child = spawn(scrcpy.executable, command.args, {
-      detached: process.platform !== "win32",
+      detached: true,
       stdio: ["ignore", logDescriptor, logDescriptor],
       windowsHide: false,
     });
@@ -605,7 +622,7 @@ async function startStreamOnce(options: StartStreamOptions): Promise<StartStream
   }
 
   activeProcess = child;
-  if (process.platform !== "win32") child.unref();
+  child.unref();
   const pid = child.pid;
   child.once("exit", () => {
     if (activeProcess === child) activeProcess = null;

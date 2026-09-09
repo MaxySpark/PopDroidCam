@@ -42,7 +42,7 @@ The install script performs a complete Linux setup and gives you the desktop app
 4. Enable USB debugging on the phone, connect it with a data-capable USB cable, and approve the phone's authorization prompt.
 5. Open PopDroidCam and follow the [one-time OBS setup](#configure-obs-once).
 
-The Windows installer already includes ADB, scrcpy, and their required DLLs. No repository clone, Node.js, or pnpm is needed.
+The Windows installer already includes ADB, scrcpy, and their required DLLs. No repository clone, Node.js, or pnpm is needed. Open a new Command Prompt after installation to use `popdroidcam help`, `popdroidcam devices`, `popdroidcam start`, `popdroidcam status`, and `popdroidcam stop`.
 
 ### Linux Install Script (Recommended)
 
@@ -76,7 +76,8 @@ Use the AppImage, not the `.deb`, on Arch Linux. Install its host dependencies f
 
 ```bash
 sudo pacman -Syu --needed \
-    android-tools scrcpy v4l2loopback-dkms v4l2loopback-utils linux-headers
+    alsa-lib android-tools gtk3 libnotify libsecret libxss libxtst nss scrcpy \
+    v4l2loopback-dkms v4l2loopback-utils xdg-utils linux-headers
 sudo modprobe v4l2loopback card_label="PopDroidCam" exclusive_caps=1
 
 chmod +x ~/Downloads/PopDroidCam-*.AppImage
@@ -608,7 +609,7 @@ pnpm run dist:win
 
 Output files are created in the `release/` directory.
 
-Pushing a version tag matching `package.json`, such as `v1.1.2`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
+Pushing a version tag matching `package.json`, such as `v1.1.3`, runs `.github/workflows/release.yml`. GitHub Actions builds the Windows installer, Linux AppImage, and Debian package, then attaches all three to one GitHub Release. Pull requests and pushes to `main` run tests, typechecking, and desktop builds on both operating systems.
 
 ## Project Structure
 

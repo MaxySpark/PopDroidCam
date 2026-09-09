@@ -522,9 +522,8 @@ cmd_desktop() {
         bun run desktop:build
     fi
     
-    # Launch electron
     echo -e "${GREEN}Launching PopDroidCam Desktop...${NC}"
-    npx electron dist/desktop/main.js &
+    pnpm exec electron dist/desktop/main.js
 }
 
 cmd_help() {

@@ -557,7 +557,7 @@
           camSel.appendChild(opt);
         });
         camSel.onchange = updateCameraOpts;
-        camSel.value = ids[0];
+        camSel.value = ids.find(id => cameras[id].facing === 'back') || ids[0];
         updateCameraOpts();
       } catch (e) {
         camSel.innerHTML = '<option value="">Error</option>';
