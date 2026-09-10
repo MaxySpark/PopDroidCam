@@ -205,9 +205,10 @@ If no phone appears, run the bundled `adb.exe devices -l` from the installed app
 3. Select the window named `PopDroidCam Camera`.
 4. Fit the source to the canvas.
 5. Click Start Virtual Camera.
-6. Select `OBS Virtual Camera` in Teams, Zoom, Meet, or another calling app.
+6. Reload Teams, Zoom, Meet, or the calling app if it was already open.
+7. Select `OBS Virtual Camera`. `PopDroidCam` is a capture window, not a camera device, so it will not appear in the camera list.
 
-Keep the scrcpy camera window open and not minimized. PopDroidCam can preview `OBS Virtual Camera` after camera permission is granted.
+Keep the `PopDroidCam Camera` window open and not minimized because OBS captures it. Starting a stream does not open a terminal window. PopDroidCam can preview `OBS Virtual Camera` after camera permission is granted.
 
 ### Windows Privacy And Firewall
 

@@ -4,6 +4,7 @@ import {
   WINDOWS_CAPTURE_TITLE,
   buildScrcpyCommand,
   describeStartupFailure,
+  getScrcpySpawnOptions,
   getStatePaths,
   isStartStreamOptions,
   isScrcpyCommandLine,
@@ -13,6 +14,14 @@ import {
   resolveExecutable,
   shouldAcceptStartupTimeout,
 } from "../src/utils.ts";
+
+test("starts scrcpy without opening a Windows console", () => {
+  const options = getScrcpySpawnOptions(42);
+
+  assert.equal(options.detached, true);
+  assert.equal(options.windowsHide, true);
+  assert.deepEqual(options.stdio, ["ignore", 42, 42]);
+});
 
 test("uses LocalAppData for Windows state", () => {
   const paths = getStatePaths("win32", { LOCALAPPDATA: "C:\\Users\\test\\AppData\\Local" }, "C:\\Users\\test");

@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from "node:child_process";
 import {
   closeSync,
   existsSync,
@@ -101,6 +101,14 @@ export type StartStreamResult =
 export type ScrcpyCommandResult =
   | { success: true; args: string[]; output: "obs" | "v4l2"; outputDevice: string }
   | { success: false; error: string };
+
+export function getScrcpySpawnOptions(logDescriptor: number): SpawnOptions {
+  return {
+    detached: true,
+    stdio: ["ignore", logDescriptor, logDescriptor],
+    windowsHide: true,
+  };
+}
 
 type Environment = NodeJS.ProcessEnv;
 type PathExists = (path: string) => boolean;
@@ -605,11 +613,7 @@ async function startStreamOnce(options: StartStreamOptions): Promise<StartStream
   let child: ChildProcess;
 
   try {
-    child = spawn(scrcpy.executable, command.args, {
-      detached: true,
-      stdio: ["ignore", logDescriptor, logDescriptor],
-      windowsHide: false,
-    });
+    child = spawn(scrcpy.executable, command.args, getScrcpySpawnOptions(logDescriptor));
   } catch (error) {
     closeSync(logDescriptor);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
