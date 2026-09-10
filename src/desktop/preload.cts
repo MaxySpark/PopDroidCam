@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     resolution: string;
     fps: string;
     serial?: string;
-    rotation?: string;
-    quality?: string;
+    rotation?: "0" | "90" | "180" | "270";
+    quality?: "low" | "medium" | "high" | "ultra";
+    mirror?: "off" | "on";
+    zoom?: "1x" | "1.5x" | "2x" | "3x" | "4x";
   }) => ipcRenderer.invoke("start-stream", options),
   stopStream: () => ipcRenderer.invoke("stop-stream"),
   
@@ -30,13 +32,13 @@ declare global {
       getStatus: () => Promise<{ running: boolean; pid: number | null; config: Record<string, string> }>;
       getRuntimeInfo: () => Promise<{
         platform: NodeJS.Platform;
-        output: "obs" | "v4l2";
-        captureTitle?: string;
-        obsInstalled?: boolean;
+        output: "windows-native" | "v4l2";
         stateDirectory: string;
         dependencies: {
           adb: { available: boolean; executable: string };
           scrcpy: { available: boolean; executable: string };
+          ffmpeg: { available: boolean; executable: string };
+          nativeCamera: { available: boolean; executable: string };
         };
       }>;
       startStream: (options: {

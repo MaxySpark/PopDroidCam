@@ -1,6 +1,6 @@
 {
   "name": "popdroidcam",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "packageManager": "pnpm@11.0.9",
   "description": "Turn your Android phone into a high-quality webcam for Linux and Windows",
   "type": "module",
@@ -18,7 +18,9 @@
     "dist:deb": "pnpm run desktop:build && electron-builder --linux deb --publish never",
     "dist:appimage": "pnpm run desktop:build && electron-builder --linux AppImage --publish never",
     "prepare:scrcpy:win": "node scripts/prepare-scrcpy-win.mjs",
-    "dist:win": "pnpm run prepare:scrcpy:win && pnpm run desktop:build && electron-builder --win nsis --x64 --publish never"
+    "prepare:ffmpeg:win": "node scripts/prepare-ffmpeg-win.mjs",
+    "build:native:camera": "node scripts/build-native-vcam.mjs",
+    "dist:win": "pnpm run prepare:scrcpy:win && pnpm run prepare:ffmpeg:win && pnpm run build:native:camera && pnpm run desktop:build && electron-builder --win nsis --x64 --publish never"
   },
   "keywords": [
     "webcam",
@@ -27,7 +29,7 @@
     "windows",
     "scrcpy",
     "v4l2loopback",
-    "obs",
+    "virtual-camera",
     "desktop"
   ],
   "author": "",
@@ -87,6 +89,14 @@
         {
           "from": "vendor/scrcpy-win64",
           "to": "bin"
+        },
+        {
+          "from": "vendor/ffmpeg-win64",
+          "to": "native"
+        },
+        {
+          "from": "vendor/native-vcam/dist",
+          "to": "native-vcam"
         }
       ]
     },
@@ -94,7 +104,7 @@
       "include": "scripts/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": false,
+      "perMachine": true,
       "deleteAppDataOnUninstall": true
     }
   }

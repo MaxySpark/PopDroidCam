@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{A7C4E2B1-5F3D-4A6C-9E8F-1D2E3F4A5B6D}</ProjectGuid>
+    <RootNamespace>PopDroidCamVirtualCameraSource</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <RestoreSources>https://api.nuget.org/v3/index.json</RestoreSources>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(ProjectDir)build\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)build\obj\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>PopDroidCamVirtualCameraSource</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;VCAMSAMPLESOURCE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <ModuleDefinitionFile>VCamSampleSource.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Activator.h" />
+    <ClInclude Include="EnumNames.h" />
+    <ClInclude Include="FrameGenerator.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="MediaSource.h" />
+    <ClInclude Include="MediaStream.h" />
+    <ClInclude Include="MFTools.h" />
+    <ClInclude Include="PopDroidCamFrameReader.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Tools.h" />
+    <ClInclude Include="Undocumented.h" />
+    <ClInclude Include="WinTrace.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Activator.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="EnumNames.cpp" />
+    <ClCompile Include="FrameGenerator.cpp" />
+    <ClCompile Include="MediaSource.cpp" />
+    <ClCompile Include="MediaStream.cpp" />
+    <ClCompile Include="MFTools.cpp" />
+    <ClCompile Include="PopDroidCamFrameReader.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Tools.cpp" />
+    <ClCompile Include="WinTrace.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="VCamSampleSource.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CppWinRT" Version="3.0.260520.1" />
+    <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.260126.7" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

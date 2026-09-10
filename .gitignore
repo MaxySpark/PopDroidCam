@@ -96,4 +96,9 @@ out/
 .pnp.*
 
 release/*
-vendor/
+vendor/*
+!vendor/native-vcam/
+!vendor/native-vcam/**
+vendor/native-vcam/build/
+vendor/native-vcam/dist/
+vendor/native-vcam/obj/

@@ -10,10 +10,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { join, posix, win32 } from "node:path";
+import type { WindowsCameraWorkerConfig } from "./windows-camera.js";
 
 export const PREFERRED_RESOLUTIONS = ["1920x1080", "1280x720", "1920x1440", "2560x1440", "3840x2160"];
-export const WINDOWS_CAPTURE_TITLE = "PopDroidCam Camera";
+export const WINDOWS_CAMERA_DEVICE = "PopDroidCam";
 
 export type Rotation = "0" | "90" | "180" | "270";
 export const ROTATION_OPTIONS: Rotation[] = ["0", "90", "180", "270"];
@@ -64,6 +66,9 @@ export interface StatePaths {
   pid: string;
   config: string;
   log: string;
+  workerConfig: string;
+  workerReady: string;
+  workerError: string;
 }
 
 export interface DependencyStatus {
@@ -73,13 +78,13 @@ export interface DependencyStatus {
 
 export interface RuntimeInfo {
   platform: NodeJS.Platform;
-  output: "obs" | "v4l2";
-  captureTitle?: string;
-  obsInstalled?: boolean;
+  output: "windows-native" | "v4l2";
   stateDirectory: string;
   dependencies: {
     adb: DependencyStatus;
     scrcpy: DependencyStatus;
+    ffmpeg: DependencyStatus;
+    nativeCamera: DependencyStatus;
   };
 }
 
@@ -99,7 +104,7 @@ export type StartStreamResult =
   | { success: false; error: string };
 
 export type ScrcpyCommandResult =
-  | { success: true; args: string[]; output: "obs" | "v4l2"; outputDevice: string }
+  | { success: true; args: string[]; output: "windows-native" | "v4l2"; outputDevice: string }
   | { success: false; error: string };
 
 export function getScrcpySpawnOptions(logDescriptor: number): SpawnOptions {
@@ -107,6 +112,15 @@ export function getScrcpySpawnOptions(logDescriptor: number): SpawnOptions {
     detached: true,
     stdio: ["ignore", logDescriptor, logDescriptor],
     windowsHide: true,
+  };
+}
+
+export function getWindowsWorkerSpawnOptions(logDescriptor: number): SpawnOptions {
+  return {
+    detached: true,
+    stdio: ["ignore", logDescriptor, logDescriptor],
+    windowsHide: true,
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
   };
 }
 
@@ -132,11 +146,19 @@ export function getStatePaths(
     pid: paths.join(directory, "pid"),
     config: paths.join(directory, "config"),
     log: paths.join(directory, "scrcpy.log"),
+    workerConfig: paths.join(directory, "windows-camera-worker.json"),
+    workerReady: paths.join(directory, "windows-camera-worker.ready"),
+    workerError: paths.join(directory, "windows-camera-worker.error"),
   };
 }
 
+export function getWindowsFramePath(environment: Environment = process.env): string {
+  const publicDirectory = environment.PUBLIC?.trim() || "C:\\Users\\Public";
+  return win32.join(publicDirectory, "PopDroidCam", "virtual-camera-frame.dat");
+}
+
 export function resolveExecutable(
-  name: "adb" | "scrcpy",
+  name: "adb" | "scrcpy" | "ffmpeg",
   platform: NodeJS.Platform = process.platform,
   environment: Environment = process.env,
   executablePath: string = process.execPath,
@@ -144,23 +166,42 @@ export function resolveExecutable(
 ): string {
   const paths = platform === "win32" ? win32 : posix;
   const filename = platform === "win32" ? `${name}.exe` : name;
-  const configuredDirectory = environment.POPDROIDCAM_BIN_DIR?.trim();
+  const configuredDirectory = name === "ffmpeg"
+    ? environment.POPDROIDCAM_FFMPEG_DIR?.trim()
+    : environment.POPDROIDCAM_BIN_DIR?.trim();
   if (configuredDirectory) {
     return paths.join(configuredDirectory, filename);
   }
 
   const executableDirectory = platform === "win32" ? win32.dirname(executablePath) : posix.dirname(executablePath);
-  const bundledPath = paths.join(executableDirectory, "resources", "bin", filename);
+  const resourceDirectory = name === "ffmpeg" ? "native" : "bin";
+  const bundledPath = paths.join(executableDirectory, "resources", resourceDirectory, filename);
   if (pathExists(bundledPath)) {
     return bundledPath;
   }
 
   if (platform === "win32") {
-    const developmentPath = win32.join(process.cwd(), "vendor", "scrcpy-win64", filename);
+    const vendorDirectory = name === "ffmpeg" ? "ffmpeg-win64" : "scrcpy-win64";
+    const developmentPath = win32.join(process.cwd(), "vendor", vendorDirectory, filename);
     if (pathExists(developmentPath)) return developmentPath;
   }
 
   return filename;
+}
+
+export function resolveNativeCameraRegistrar(
+  platform: NodeJS.Platform = process.platform,
+  executablePath: string = process.execPath,
+  pathExists: PathExists = existsSync,
+): string {
+  if (platform !== "win32") return "";
+
+  const executableDirectory = win32.dirname(executablePath);
+  const packagedPath = win32.join(executableDirectory, "resources", "native-vcam", "PopDroidCamCameraRegistrar.exe");
+  if (pathExists(packagedPath)) return packagedPath;
+
+  const developmentPath = win32.join(process.cwd(), "vendor", "native-vcam", "dist", "PopDroidCamCameraRegistrar.exe");
+  return pathExists(developmentPath) ? developmentPath : packagedPath;
 }
 
 const rotations = new Set<string>(ROTATION_OPTIONS);
@@ -220,6 +261,9 @@ function clearProcessState(pid?: number): void {
     return;
   }
   removeFile(paths.pid);
+  removeFile(paths.workerConfig);
+  removeFile(paths.workerReady);
+  removeFile(paths.workerError);
 }
 
 export function isRunning(): number | null {
@@ -248,7 +292,7 @@ export function isRunning(): number | null {
     return null;
   }
 
-  if (!isScrcpyCommandLine(readProcessCommandLine(pid))) {
+  if (!isOwnedStreamCommandLine(readProcessCommandLine(pid), process.platform)) {
     removeFile(paths.pid);
     return null;
   }
@@ -278,6 +322,14 @@ export function isScrcpyCommandLine(commandLine: string): boolean {
   return /(^|[/\\\s])scrcpy(?:\.exe)?(?=["\s]|$)/i.test(commandLine) && commandLine.includes("--video-source=camera");
 }
 
+export function isWindowsCameraWorkerCommandLine(commandLine: string): boolean {
+  return /windows-camera-worker\.js(?=["\s]|$)/i.test(commandLine) && /(?:^|\s)--config(?:\s|=)/i.test(commandLine);
+}
+
+export function isOwnedStreamCommandLine(commandLine: string, platform: NodeJS.Platform): boolean {
+  return platform === "win32" ? isWindowsCameraWorkerCommandLine(commandLine) : isScrcpyCommandLine(commandLine);
+}
+
 export function getCurrentConfig(): Config {
   const config: Config = {};
   const configPath = getStatePaths().config;
@@ -298,32 +350,33 @@ export function getCurrentConfig(): Config {
   return config;
 }
 
-function checkDependency(name: "adb" | "scrcpy"): DependencyStatus {
+function checkDependency(name: "adb" | "scrcpy" | "ffmpeg"): DependencyStatus {
   const executable = resolveExecutable(name);
-  const args = name === "adb" ? ["version"] : ["--version"];
+  const args = name === "adb" ? ["version"] : ["-version"];
+  if (name === "scrcpy") args[0] = "--version";
   const result = spawnSync(executable, args, { timeout: 5000, encoding: "utf-8", windowsHide: true });
   return { available: !result.error && result.status === 0, executable };
 }
 
-function isObsInstalled(environment: Environment = process.env, pathExists: PathExists = existsSync): boolean {
-  const candidates = [
-    environment.ProgramFiles ? join(environment.ProgramFiles, "obs-studio", "bin", "64bit", "obs64.exe") : "",
-    environment.LOCALAPPDATA ? join(environment.LOCALAPPDATA, "Programs", "obs-studio", "bin", "64bit", "obs64.exe") : "",
-  ];
-  return candidates.some((candidate) => candidate.length > 0 && pathExists(candidate));
+export function getNativeCameraStatus(): DependencyStatus {
+  const executable = resolveNativeCameraRegistrar();
+  if (process.platform !== "win32" || !existsSync(executable)) return { available: false, executable };
+
+  const result = spawnSync(executable, ["status"], { timeout: 10000, windowsHide: true });
+  return { available: !result.error && result.status === 0, executable };
 }
 
 export function getRuntimeInfo(): RuntimeInfo {
   const windows = process.platform === "win32";
   return {
     platform: process.platform,
-    output: windows ? "obs" : "v4l2",
-    captureTitle: windows ? WINDOWS_CAPTURE_TITLE : undefined,
-    obsInstalled: windows ? isObsInstalled() : undefined,
+    output: windows ? "windows-native" : "v4l2",
     stateDirectory: getStatePaths().directory,
     dependencies: {
       adb: checkDependency("adb"),
       scrcpy: checkDependency("scrcpy"),
+      ffmpeg: checkDependency("ffmpeg"),
+      nativeCamera: getNativeCameraStatus(),
     },
   };
 }
@@ -485,16 +538,15 @@ export function buildScrcpyCommand(
     "--no-audio",
   ];
 
-  let output: "obs" | "v4l2";
+  let output: "windows-native" | "v4l2";
   let outputDevice: string;
   if (platform === "linux") {
     output = "v4l2";
     outputDevice = v4l2Device;
     args.push(`--v4l2-sink=${v4l2Device}`, "--no-window");
   } else {
-    output = "obs";
-    outputDevice = "OBS Virtual Camera";
-    args.push(`--window-title=${WINDOWS_CAPTURE_TITLE}`, "--window-borderless");
+    output = "windows-native";
+    outputDevice = WINDOWS_CAMERA_DEVICE;
   }
 
   if (options.serial) args.push(`--serial=${options.serial}`);
@@ -522,7 +574,6 @@ export function buildScrcpyCommand(
 }
 
 export function isStartupReadyLog(log: string, platform: NodeJS.Platform): boolean {
-  if (platform === "win32") return /INFO:\s+Texture:\s+\d+x\d+/i.test(log);
   if (platform === "linux") return /INFO:.*V4L2.*sink/i.test(log);
   return false;
 }
@@ -582,6 +633,148 @@ export function describeStartupFailure(log: string, fallback: string): string {
   return fallback;
 }
 
+function writeStreamConfig(options: StartStreamOptions, command: Extract<ScrcpyCommandResult, { success: true }>): void {
+  const paths = getStatePaths();
+  writeFileSync(paths.config, [
+    `res=${options.resolution}`,
+    `fps=${options.fps}`,
+    `camera_id=${options.cameraId}`,
+    `device=${command.outputDevice}`,
+    `output=${command.output}`,
+    `rotation=${options.rotation ?? "0"}`,
+    `quality=${options.quality ?? "high"}`,
+    `mirror=${options.mirror ?? "off"}`,
+    `zoom=${options.zoom ?? "1x"}`,
+    "",
+  ].join("\n"));
+}
+
+function waitForWindowsWorker(child: ChildProcess, paths: StatePaths, timeoutMs: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer: NodeJS.Timeout;
+    let poller: NodeJS.Timeout;
+    const finish = (error: string | null): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearInterval(poller);
+      resolve(error);
+    };
+    poller = setInterval(() => {
+      if (existsSync(paths.workerError)) {
+        try {
+          finish(readFileSync(paths.workerError, "utf-8").trim() || "Windows camera worker failed");
+        } catch {
+          finish("Windows camera worker failed");
+        }
+        return;
+      }
+      if (existsSync(paths.workerReady)) finish(null);
+    }, 50);
+    timer = setTimeout(() => finish("Windows camera worker did not become ready"), timeoutMs);
+    child.once("error", (error) => finish(`Could not start Windows camera worker: ${error.message}`));
+    child.once("exit", (code, signal) => {
+      finish(`Windows camera worker exited during startup (${signal || `code ${code ?? "unknown"}`})`);
+    });
+  });
+}
+
+export function getWindowsTaskkillArgs(pid: number): string[] {
+  return ["/PID", String(pid), "/T", "/F"];
+}
+
+function killWindowsProcessTree(pid: number): boolean {
+  const result = spawnSync("taskkill.exe", getWindowsTaskkillArgs(pid), {
+    encoding: "utf-8",
+    timeout: 10000,
+    windowsHide: true,
+  });
+  return !result.error && result.status === 0;
+}
+
+async function startWindowsCamera(
+  options: StartStreamOptions,
+  command: Extract<ScrcpyCommandResult, { success: true }>,
+  scrcpyExecutable: string,
+): Promise<StartStreamResult> {
+  if (!getNativeCameraStatus().available) {
+    return { success: false, error: "The native PopDroidCam camera is not registered. Reinstall PopDroidCam as administrator." };
+  }
+
+  const ffmpeg = checkDependency("ffmpeg");
+  if (!ffmpeg.available) {
+    return { success: false, error: `FFmpeg was not found. Expected: ${ffmpeg.executable}` };
+  }
+
+  const paths = getStatePaths();
+  mkdirSync(paths.directory, { recursive: true });
+  removeFile(paths.workerReady);
+  removeFile(paths.workerError);
+  const workerConfig: WindowsCameraWorkerConfig = {
+    scrcpyExecutable,
+    ffmpegExecutable: ffmpeg.executable,
+    scrcpyArgs: command.args,
+    framePath: getWindowsFramePath(),
+    readyPath: paths.workerReady,
+    errorPath: paths.workerError,
+    logPath: paths.log,
+  };
+  writeFileSync(paths.workerConfig, JSON.stringify(workerConfig));
+
+  const workerPath = fileURLToPath(new URL("./windows-camera-worker.js", import.meta.url));
+  const logDescriptor = openSync(paths.log, "w");
+  let child: ChildProcess;
+  try {
+    child = spawn(process.execPath, [workerPath, "--config", paths.workerConfig], getWindowsWorkerSpawnOptions(logDescriptor));
+  } catch (error) {
+    closeSync(logDescriptor);
+    clearProcessState();
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  closeSync(logDescriptor);
+
+  const pid = child.pid;
+  if (!pid) {
+    child.kill("SIGTERM");
+    clearProcessState();
+    return { success: false, error: "Windows camera worker started without a process ID" };
+  }
+
+  activeProcess = child;
+  child.unref();
+  child.once("exit", () => {
+    if (activeProcess === child) activeProcess = null;
+    clearProcessState(pid);
+  });
+
+  const startupError = await waitForWindowsWorker(child, paths, 15000);
+  if (startupError) {
+    if (activeProcess === child) activeProcess = null;
+    killWindowsProcessTree(pid);
+    clearProcessState(pid);
+    const log = existsSync(paths.log) ? readFileSync(paths.log, "utf-8") : "";
+    return { success: false, error: describeStartupFailure(log, startupError) };
+  }
+  if (activeProcess !== child || child.exitCode !== null || child.killed) {
+    clearProcessState(pid);
+    return { success: false, error: "Windows camera worker stopped before startup completed" };
+  }
+
+  try {
+    writeFileSync(paths.pid, String(pid));
+    writeStreamConfig(options, command);
+    removeFile(paths.workerReady);
+    removeFile(paths.workerError);
+    return { success: true, pid };
+  } catch (error) {
+    killWindowsProcessTree(pid);
+    activeProcess = null;
+    clearProcessState(pid);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function startStreamOnce(options: StartStreamOptions): Promise<StartStreamResult> {
   if (isRunning()) return { success: false, error: "A stream is already running" };
 
@@ -605,6 +798,10 @@ async function startStreamOnce(options: StartStreamOptions): Promise<StartStream
   if (!selectedDevice) return { success: false, error: "No authorized Android device found" };
   if (selectedDevice.state !== "device") {
     return { success: false, error: `Android device is ${selectedDevice.state}. Approve the USB debugging prompt on the phone.` };
+  }
+
+  if (process.platform === "win32") {
+    return startWindowsCamera(options, command, scrcpy.executable);
   }
 
   const paths = getStatePaths();
@@ -646,18 +843,7 @@ async function startStreamOnce(options: StartStreamOptions): Promise<StartStream
 
   try {
     writeFileSync(paths.pid, String(child.pid));
-    writeFileSync(paths.config, [
-      `res=${options.resolution}`,
-      `fps=${options.fps}`,
-      `camera_id=${options.cameraId}`,
-      `device=${command.outputDevice}`,
-      `output=${command.output}`,
-      `rotation=${options.rotation ?? "0"}`,
-      `quality=${options.quality ?? "high"}`,
-      `mirror=${options.mirror ?? "off"}`,
-      `zoom=${options.zoom ?? "1x"}`,
-      "",
-    ].join("\n"));
+    writeStreamConfig(options, command);
 
     return { success: true, pid };
   } catch (error) {
@@ -683,11 +869,17 @@ export function stopStream(): boolean {
   if (!pid) return false;
 
   try {
-    if (activeProcess?.pid === pid) {
+    if (process.platform === "win32") {
+      const killed = killWindowsProcessTree(pid);
+      activeProcess = null;
+      removeFile(getWindowsFramePath());
+      if (!killed) {
+        clearProcessState(pid);
+        return false;
+      }
+    } else if (activeProcess?.pid === pid) {
       activeProcess.kill("SIGTERM");
       activeProcess = null;
-    } else if (process.platform === "win32") {
-      process.kill(pid, "SIGTERM");
     } else {
       try {
         process.kill(-pid, "SIGTERM");

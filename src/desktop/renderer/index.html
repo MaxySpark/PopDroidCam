@@ -258,11 +258,11 @@
       <div class="panel-container">
         <div class="panel active" id="camera-panel">
           <div class="output-guide" id="windowsOutputGuide">
-            <strong>PopDroidCam is not a camera device on Windows. OBS provides the camera.</strong>
+            <strong>Windows native camera output is 1280x720 at 30 fps.</strong>
             <ol class="output-steps">
-              <li>Add a Window Capture source for “PopDroidCam Camera”.</li>
-              <li>Start OBS Virtual Camera.</li>
-              <li>Reload your call, then select “OBS Virtual Camera”.</li>
+              <li>Start the phone camera here.</li>
+              <li>Reload your calling app if it was already open.</li>
+              <li>Select “PopDroidCam” from its camera list.</li>
             </ol>
           </div>
           <div class="field">
@@ -444,7 +444,7 @@
         const cam = devices.find(d => {
           if (d.kind !== 'videoinput' || !d.label) return false;
           const label = d.label.toLowerCase();
-          if (runtimeInfo?.output === 'obs') return label.includes('obs virtual camera');
+          if (runtimeInfo?.output === 'windows-native') return label.includes('popdroidcam');
           return label.includes('popdroidcam') || label.includes('android') || label.includes('v4l2');
         });
         if (cam) {
@@ -645,8 +645,8 @@
       try {
         const res = await api.startStream({ cameraId, resolution, fps, serial, rotation, quality, mirror, zoom });
         if (res.success) {
-          const message = runtimeInfo?.output === 'obs'
-            ? 'Camera window started. Start OBS Virtual Camera.'
+          const message = runtimeInfo?.output === 'windows-native'
+            ? 'Camera started. Select PopDroidCam in your calling app.'
             : 'Stream started';
           showMessage('cameraMessage', message);
           refreshStatus();
@@ -762,14 +762,16 @@
 
     async function initialize() {
       runtimeInfo = await api.getRuntimeInfo();
-      if (runtimeInfo.output === 'obs') {
+      if (runtimeInfo.output === 'windows-native') {
         document.getElementById('windowsOutputGuide').classList.add('visible');
         document.getElementById('qualitySelect').value = 'medium';
-        document.getElementById('previewText').textContent = 'Start OBS Virtual Camera to preview the Windows webcam output here.';
+        document.getElementById('previewText').textContent = 'Start streaming to preview the PopDroidCam camera output here.';
         if (!runtimeInfo.dependencies.scrcpy.available) {
           showMessage('cameraMessage', `scrcpy not found: ${runtimeInfo.dependencies.scrcpy.executable}`, true);
-        } else if (runtimeInfo.obsInstalled === false) {
-          showMessage('cameraMessage', 'OBS Studio was not found in a standard install location.', true);
+        } else if (!runtimeInfo.dependencies.ffmpeg.available) {
+          showMessage('cameraMessage', `FFmpeg not found: ${runtimeInfo.dependencies.ffmpeg.executable}`, true);
+        } else if (!runtimeInfo.dependencies.nativeCamera.available) {
+          showMessage('cameraMessage', 'Native camera is not registered. Reinstall PopDroidCam as administrator.', true);
         }
       }
       await refreshStatus();

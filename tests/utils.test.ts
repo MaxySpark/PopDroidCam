@@ -1,17 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  WINDOWS_CAPTURE_TITLE,
+  WINDOWS_CAMERA_DEVICE,
   buildScrcpyCommand,
   describeStartupFailure,
   getScrcpySpawnOptions,
   getStatePaths,
+  getWindowsFramePath,
+  getWindowsTaskkillArgs,
+  getWindowsWorkerSpawnOptions,
   isStartStreamOptions,
   isScrcpyCommandLine,
   isStartupReadyLog,
+  isWindowsCameraWorkerCommandLine,
   parseAdbDevices,
   parseCameraSizes,
   resolveExecutable,
+  resolveNativeCameraRegistrar,
   shouldAcceptStartupTimeout,
 } from "../src/utils.ts";
 
@@ -21,6 +26,15 @@ test("starts scrcpy without opening a Windows console", () => {
   assert.equal(options.detached, true);
   assert.equal(options.windowsHide, true);
   assert.deepEqual(options.stdio, ["ignore", 42, 42]);
+});
+
+test("starts the Windows camera worker detached under Electron's Node runtime", () => {
+  const options = getWindowsWorkerSpawnOptions(42);
+
+  assert.equal(options.detached, true);
+  assert.equal(options.windowsHide, true);
+  assert.deepEqual(options.stdio, ["ignore", 42, 42]);
+  assert.equal(options.env?.ELECTRON_RUN_AS_NODE, "1");
 });
 
 test("uses LocalAppData for Windows state", () => {
@@ -44,6 +58,37 @@ test("prefers configured and packaged executables", () => {
     "C:\\app\\resources\\bin\\scrcpy.exe",
   );
   assert.equal(resolveExecutable("scrcpy", "linux", {}, "/usr/bin/node", () => false), "scrcpy");
+  assert.equal(
+    resolveExecutable("ffmpeg", "win32", {}, "C:\\app\\PopDroidCam.exe", () => true),
+    "C:\\app\\resources\\native\\ffmpeg.exe",
+  );
+  assert.equal(
+    resolveExecutable("ffmpeg", "win32", { POPDROIDCAM_BIN_DIR: "C:\\scrcpy" }, "C:\\app\\PopDroidCam.exe", () => true),
+    "C:\\app\\resources\\native\\ffmpeg.exe",
+  );
+  assert.equal(
+    resolveExecutable("ffmpeg", "win32", { POPDROIDCAM_FFMPEG_DIR: "C:\\ffmpeg" }, "C:\\app\\PopDroidCam.exe", () => false),
+    "C:\\ffmpeg\\ffmpeg.exe",
+  );
+});
+
+test("resolves the packaged and development native camera registrar", () => {
+  assert.equal(
+    resolveNativeCameraRegistrar("win32", "C:\\app\\PopDroidCam.exe", (path) => path.startsWith("C:\\app")),
+    "C:\\app\\resources\\native-vcam\\PopDroidCamCameraRegistrar.exe",
+  );
+  assert.match(
+    resolveNativeCameraRegistrar("win32", "C:\\app\\PopDroidCam.exe", (path) => path.includes("vendor")),
+    /vendor\\native-vcam\\dist\\PopDroidCamCameraRegistrar\.exe$/,
+  );
+  assert.equal(resolveNativeCameraRegistrar("linux"), "");
+});
+
+test("publishes Windows frames under the public profile", () => {
+  assert.equal(
+    getWindowsFramePath({ PUBLIC: "D:\\Public" }),
+    "D:\\Public\\PopDroidCam\\virtual-camera-frame.dat",
+  );
 });
 
 test("parses USB, Wi-Fi, and unauthorized ADB devices", () => {
@@ -88,7 +133,7 @@ test("builds the Linux V4L2 command", () => {
   assert.ok(!result.args.some((arg) => arg.startsWith("--window-title=")));
 });
 
-test("builds the Windows OBS capture command", () => {
+test("builds the Windows native camera source command", () => {
   const result = buildScrcpyCommand({
     cameraId: "1",
     resolution: "1920x1080",
@@ -101,10 +146,10 @@ test("builds the Windows OBS capture command", () => {
   }, "win32");
   if (!result.success) assert.fail(result.error);
 
-  assert.equal(result.output, "obs");
-  assert.equal(result.outputDevice, "OBS Virtual Camera");
-  assert.ok(result.args.includes(`--window-title=${WINDOWS_CAPTURE_TITLE}`));
-  assert.ok(result.args.includes("--window-borderless"));
+  assert.equal(result.output, "windows-native");
+  assert.equal(result.outputDevice, WINDOWS_CAMERA_DEVICE);
+  assert.ok(!result.args.some((arg) => arg.startsWith("--window-title=")));
+  assert.ok(!result.args.includes("--window-borderless"));
   assert.ok(result.args.includes("--video-bit-rate=8M"));
   assert.ok(result.args.includes("--serial=abc123"));
   assert.ok(result.args.includes("--capture-orientation=flip90"));
@@ -148,9 +193,20 @@ test("recognizes owned Linux scrcpy camera processes", () => {
   assert.equal(isScrcpyCommandLine("/usr/local/bin/scrcpy --video-source=display"), false);
 });
 
+test("recognizes the detached Windows camera worker", () => {
+  assert.equal(
+    isWindowsCameraWorkerCommandLine('"C:\\Program Files\\PopDroidCam\\PopDroidCam.exe" "C:\\app\\windows-camera-worker.js" --config state.json'),
+    true,
+  );
+  assert.equal(isWindowsCameraWorkerCommandLine("scrcpy.exe --video-source=camera"), false);
+});
+
+test("kills the complete Windows worker process tree", () => {
+  assert.deepEqual(getWindowsTaskkillArgs(1234), ["/PID", "1234", "/T", "/F"]);
+});
+
 test("requires platform-specific scrcpy readiness markers", () => {
-  assert.equal(isStartupReadyLog("INFO: Renderer: direct3d\nINFO: Texture: 1920x1080", "win32"), true);
-  assert.equal(isStartupReadyLog("INFO: Renderer: direct3d", "win32"), false);
+  assert.equal(isStartupReadyLog("INFO: Renderer: direct3d\nINFO: Texture: 1920x1080", "win32"), false);
   assert.equal(isStartupReadyLog("INFO: V4L2 sink started to device: /dev/video9", "linux"), true);
   assert.equal(isStartupReadyLog("INFO: Device connected", "win32"), false);
 });

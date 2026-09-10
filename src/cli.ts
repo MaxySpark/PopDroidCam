@@ -125,7 +125,8 @@ async function start(args: string[]): Promise<number> {
     console.error(result.error);
     return 1;
   }
-  console.log(`Camera started (PID: ${result.pid}). On Windows, capture "PopDroidCam Camera" in OBS.`);
+  const output = process.platform === "win32" ? " Select PopDroidCam in your camera app." : "";
+  console.log(`Camera started (PID: ${result.pid}).${output}`);
   return 0;
 }
 
