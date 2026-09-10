@@ -1,0 +1,38 @@
+README.md
+  s_8abe7a8f837309::t_4f7e741c873923 208-209,211
+tests/utils.test.ts
+  s_7b1cb984084fae::t_be042b07633678 23-24
+  s_7b1cb984084fae::t_c913f81ea76393 7
+  s_8abe7a8f837309::t_8ad04ca586ade7 18-22,25
+src/utils.ts
+  s_8abe7a8f837309::t_8ad04ca586ade7 1,109-112,616
+  s_8abe7a8f837309::t_4f7e741c873923 105
+  s_7b1cb984084fae::t_b7ba930960135b 108
+src/desktop/renderer/index.html
+  s_7b1cb984084fae::t_fd7f19ad37dac2 261
+  s_8abe7a8f837309::t_4f7e741c873923 265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "780a8268c2f10cc57005e4431b7d03448484aee2",
+  "prompts": {},
+  "sessions": {
+    "s_7b1cb984084fae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7423ed5dffe1jpkEO1F1a1iT6",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    },
+    "s_8abe7a8f837309": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7455e434ffeG9eZ3cc7HkQT3W",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
