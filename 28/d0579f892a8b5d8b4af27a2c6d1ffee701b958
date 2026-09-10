@@ -1,0 +1,164 @@
+THIRD_PARTY_NOTICES.md
+  s_31a4e80c0b69dd::t_982b3724b26ab1 8
+  s_31a4e80c0b69dd::t_1549527a0d4fce 9
+  s_7b1cb984084fae::t_a13a0fbfbeba11 6
+  s_7b1cb984084fae::t_76a1c4f3f00d08 7
+tests/windows-camera.test.ts
+  s_8abe7a8f837309::t_89519a06c92805 19-27,31
+  s_7b1cb984084fae::t_c913f81ea76393 1-17,28-30,32-85
+  s_8abe7a8f837309::t_bc14083957df2e 18
+package.json
+  s_7b1cb984084fae::t_fd7f19ad37dac2 21,23,32,92-96
+  s_8abe7a8f837309::t_003f7b19dd87c0 3
+  s_31a4e80c0b69dd::t_982b3724b26ab1 22,98-99,107
+tsconfig.electron.json
+  s_7b1cb984084fae::t_fd7f19ad37dac2 15
+src/windows-camera-worker.ts
+  s_8abe7a8f837309::t_17e5d2b25a775e 2,44-62,75
+  s_7b1cb984084fae::t_fd40021cd7ac0c 1,3-43,63-69,78-100,107-137
+  s_7b1cb984084fae::t_a13a0fbfbeba11 70-74,76-77
+  s_7b1cb984084fae::t_be042b07633678 101-106
+src/cli.ts
+  s_7b1cb984084fae::t_fd7f19ad37dac2 128-129
+scripts/prepare-ffmpeg-win.mjs
+  s_7b1cb984084fae::t_fd7f19ad37dac2 1-2,5,8-13,15-53,55-56,65-66
+  s_7b1cb984084fae::t_76a1c4f3f00d08 3-4,6-7,14,54,57-64
+src/desktop/preload.cts
+  s_7b1cb984084fae::t_fd7f19ad37dac2 35,40
+  s_7b1cb984084fae::t_be042b07633678 14-17
+  s_8abe7a8f837309::t_f2a93668bcefbb 41
+tests/utils.test.ts
+  s_8abe7a8f837309::t_003f7b19dd87c0 65-72
+  s_8abe7a8f837309::t_8ad04ca586ade7 39
+  s_8abe7a8f837309::t_de320771fb14db 19,73-84
+  s_7b1cb984084fae::t_be042b07633678 11,31-37
+  s_7b1cb984084fae::t_c913f81ea76393 4,9-10,15,61-64,85-91,136,149-152,196-207,209
+  s_de16e0f94ea6c6::t_d8f97475328149 38
+scripts/installer.nsh
+  s_8abe7a8f837309::t_b201ed2e308ca2 5,20,36,53,55
+  s_8abe7a8f837309::t_f2a93668bcefbb 15-17,19,22-25,37
+  s_8abe7a8f837309::t_17e5d2b25a775e 1-2,4,6,9,35,43,46
+  s_31a4e80c0b69dd::t_982b3724b26ab1 7-8,10-13,44
+  s_8abe7a8f837309::t_2dc82e6efbfaae 18,21,38-42,45,47-50
+  s_8abe7a8f837309::t_48f98e1df2851c 52,54
+README.md
+  s_8abe7a8f837309::t_4f7e741c873923 196
+  s_8abe7a8f837309::t_f2a93668bcefbb 186,190-195
+  s_7b1cb984084fae::t_a13a0fbfbeba11 5,39-43,45,116,128,167-168,179,185,215,623,642-643,648,769,781
+  s_8abe7a8f837309::t_17e5d2b25a775e 197
+tests/installers.test.ts
+  s_8abe7a8f837309::t_003f7b19dd87c0 32-33
+  s_8abe7a8f837309::t_f2a93668bcefbb 30-31
+  s_31a4e80c0b69dd::t_548a31cfd09eb5 18,21,27-29
+  s_7b1cb984084fae::t_c913f81ea76393 24-26
+scripts/build-native-vcam.mjs
+  s_31a4e80c0b69dd::t_258adace579859 6-7,11,49-52,55,60-63,67
+  s_31a4e80c0b69dd::t_982b3724b26ab1 1-5,8-10,12-48,53-54,56-59,64-66,68-69
+.gitignore
+  s_31a4e80c0b69dd::t_548a31cfd09eb5 99,102-104
+  s_31a4e80c0b69dd::t_982b3724b26ab1 100-101
+src/desktop/renderer/index.html
+  s_7b1cb984084fae::t_456b9b484f66eb 447,648-649,765,768,771-772
+  s_8abe7a8f837309::t_f2a93668bcefbb 773-774
+  s_7b1cb984084fae::t_fd7f19ad37dac2 263-264
+  s_7b1cb984084fae::t_50a428d674ed07 265
+src/utils.ts
+  s_8abe7a8f837309::t_2dc82e6efbfaae 701
+  s_7b1cb984084fae::t_a1420340eb4e3f 205,264-266,636-700,705-750,752-777,803-806,846,872-874,876-880
+  s_8abe7a8f837309::t_de320771fb14db 87,192-204,361-366,379,702-704
+  s_8abe7a8f837309::t_8ad04ca586ade7 126
+  s_8abe7a8f837309::t_17e5d2b25a775e 169-171,751,875
+  s_7b1cb984084fae::t_b7ba930960135b 13,15,18,69-71,81,86,118-125,149-151,155-159,161,177-178,184-185,295,325-332,353,355-356,373,378,541,548-549
+  s_7b1cb984084fae::t_84f82a20af76d7 206
+src/windows-camera.ts
+  s_8abe7a8f837309::t_50902608409ebf 39-43,49
+  s_7b1cb984084fae::t_a13a0fbfbeba11 79-80,88-94,96-98
+  s_7b1cb984084fae::t_fd40021cd7ac0c 1-38,44-48,50-78,81-87,95,99-104,107-110,112,115-135,138,140-144
+  s_8abe7a8f837309::t_17e5d2b25a775e 105-106,111,113-114,136-137,139
+vendor/native-vcam/Activator.cpp
+  s_8abe7a8f837309::t_01d8e1c14cd18e 1-52
+vendor/native-vcam/Activator.h
+  s_8abe7a8f837309::t_bd7319aade74e5 1-38
+vendor/native-vcam/EnumNames.cpp
+  s_8abe7a8f837309::t_9192f7bf406806 1-598
+vendor/native-vcam/EnumNames.h
+  s_8abe7a8f837309::t_e3bb4e8f69b7dc 1-17
+vendor/native-vcam/FrameGenerator.cpp
+  s_8abe7a8f837309::t_6bcdeb0f67a263 1-280
+vendor/native-vcam/FrameGenerator.h
+  s_8abe7a8f837309::t_d260714c031dfa 1-50
+vendor/native-vcam/MFTools.cpp
+  s_8abe7a8f837309::t_3f11307cdfcb52 1-94
+vendor/native-vcam/MFTools.h
+  s_8abe7a8f837309::t_d919256f46c0c3 1-342
+vendor/native-vcam/MediaSource.cpp
+  s_8abe7a8f837309::t_425ad3b6946b6c 1-385
+vendor/native-vcam/MediaSource.h
+  s_8abe7a8f837309::t_05dcfaf0cf31fd 1-87
+vendor/native-vcam/MediaStream.cpp
+  s_8abe7a8f837309::t_77e7ff00794290 1-279
+vendor/native-vcam/MediaStream.h
+  s_8abe7a8f837309::t_47e3b1aa2922f6 1-60
+vendor/native-vcam/Tools.cpp
+  s_8abe7a8f837309::t_871186307d176d 1-311
+vendor/native-vcam/Tools.h
+  s_8abe7a8f837309::t_609be2d536c71b 1-75
+vendor/native-vcam/Undocumented.h
+  s_8abe7a8f837309::t_7db8083b0ba26b 1-21
+vendor/native-vcam/VCamSampleSource.def
+  s_8abe7a8f837309::t_1d114ff3ed6935 1-6
+vendor/native-vcam/WinTrace.cpp
+  s_8abe7a8f837309::t_7190101af9e1f7 1-77
+vendor/native-vcam/WinTrace.h
+  s_8abe7a8f837309::t_8408f191eb5768 1-19
+vendor/native-vcam/dllmain.cpp
+  s_8abe7a8f837309::t_0601ae5c54b2e4 1-123
+vendor/native-vcam/framework.h
+  s_8abe7a8f837309::t_a3fcb26d8926f8 1-57
+vendor/native-vcam/pch.cpp
+  s_8abe7a8f837309::t_4914a96fe4a24a 1-5
+vendor/native-vcam/pch.h
+  s_8abe7a8f837309::t_3c415aeba3cf4a 1-6
+vendor/native-vcam/resource.h
+  s_8abe7a8f837309::t_b4d4d9d5e685ac 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "28d0579f892a8b5d8b4af27a2c6d1ffee701b958",
+  "prompts": {},
+  "sessions": {
+    "s_31a4e80c0b69dd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7423ed95ffezN6s1TDMJhBFLz",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    },
+    "s_7b1cb984084fae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7423ed5dffe1jpkEO1F1a1iT6",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    },
+    "s_8abe7a8f837309": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7455e434ffeG9eZ3cc7HkQT3W",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    },
+    "s_de16e0f94ea6c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7dd1e603ffep5TiIZgY4rLbtZ",
+        "model": "unknown"
+      },
+      "human_author": "MaxySpark <me@maxyspark.me>"
+    }
+  }
+}
